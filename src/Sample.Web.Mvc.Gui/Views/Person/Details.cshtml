@@ -1,0 +1,57 @@
+﻿@using Sample.Web.Mvc.Gui.Core.Extensions;
+@*@model Sample.Web.Mvc.Gui.Models.Person*@
+
+@{
+    ViewBag.Title = "Details";
+}
+
+<h2>Details</h2>
+
+<script type="text/html" id="error-template">
+    <span style="cursor: pointer" data-bind="visible: !data.isValid(), attr: { title: data.validationMessage }">&nbsp;!&nbsp;</span>
+</script>
+<br />
+<div data-bind="labelBinding: FirstName">FirstName</div>
+<input id="FirstName" type="text" data-bind="value: FirstName" /><div data-bind="errorBinding: FirstName"></div>
+<br />
+<div data-bind="labelBinding: LastName">LastName</div>
+<input id="LastName" type="text" data-bind="value: LastName" /><div data-bind="errorBinding: LastName"></div>
+<br />
+<div data-bind="labelBinding: EMail">EMail</div>
+<input id="EMail" type="text" data-bind="value: EMail" /><div data-bind="errorBinding: EMail"></div>
+<br />
+<div data-bind="labelBinding: SomeInt">SomeInt</div>
+<input id="SomeInt" type="text" data-bind="value: formatted.SomeInt" /><div data-bind="errorBinding: SomeInt"></div>
+<br />
+<div data-bind="labelBinding: SomeDecimal">SomeDecimal</div>
+<input id="SomeDecimal" type="text" data-bind="value: formatted.SomeDecimal" /><div data-bind="errorBinding: SomeDecimal"></div>
+<br />
+<div data-bind="labelBinding: BirthDate">BirthDate</div>
+<input id="BirthDate" type="text" data-bind="value: formatted.BirthDate" /><div data-bind="errorBinding: BirthDate"></div>
+<br />
+
+<div>
+    @Html.ActionLink("Back to List", "Index")
+</div>
+
+@section Scripts {
+    @Scripts.Render("~/App/Person/PersonViewModel.js")
+    <script type="text/javascript">
+        $(document).ready(function(){
+            var metadata = @Html.Raw(((object)Model).ToJson());
+
+            Globalize.culture("nl-BE");
+
+            var decimalseparator = Globalize.culture().numberFormat["."];
+
+            $.getJSON("/api/Person/121").success(function(data){
+                var personVm = new app.person.Person(metadata);
+                ko.metadata.mapToViewModelByMetadata(data, personVm);
+                personVm.isValid();
+                ko.applyBindings(personVm);
+            }).error(function(data){
+                alert(data);
+            });
+        });
+    </script>
+}
