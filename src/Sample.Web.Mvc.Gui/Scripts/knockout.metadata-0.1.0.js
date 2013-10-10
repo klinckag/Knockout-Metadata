@@ -46,6 +46,9 @@
             self._metadataContainer = function () { };
             self._metadataContainer.data = metadata;
 
+            //Formatted stuff goes on the formatted function
+            self._formatted = function () { };
+
             //Get the metadata for a specific property.
             //   'Nested' objects are supported through the . notation ( fi address.street )
             self.getMetadata = function (propertyName) {
@@ -290,16 +293,34 @@
                         //Create the observable
                         viewmodel[propMetadata.PropertyName] = viewmodel.createObservable(propMetadata.PropertyName);
                     }
-                    //And set the value
-                    //special case for Dates
+                    //And set the value ( with a special case for Dates )
                     if (propMetadata.DataType === "Date" || propMetadata.DataType === "DateTime") {
                         dataValue = Globalize.parseDate(dataValue, "yyyy-MM-ddTHH:mm:ss");
                         //compensate timezoneoffset
                         //value.setUTCMinutes(value.getMinutes() - value.getTimezoneOffset());
                     }
-                    viewmodel[propMetadata.PropertyName](dataValue)
+                    viewmodel[propMetadata.PropertyName](dataValue);
+                    //create and add a formatter if needed/possible
+                    var formatter = createFormatter(viewmodel, propMetadata);
+                    if (formatter) {
+                        viewmodel._formatted[propMetadata.PropertyName] = formatter;
+                    }
                 }
             }
+        }
+
+        createFormatter = function (viewmodel, propMetadata) {
+            var formatter = null;
+            if (propMetadata.DataType === "Int32") {
+                formatter = ko.metadata.createIntegerFormatter(viewmodel[propMetadata.PropertyName]);
+            }
+            if (propMetadata.DataType === "Decimal") {
+                formatter = ko.metadata.createDecimalFormatter(viewmodel[propMetadata.PropertyName], 4);
+            }
+            if (propMetadata.DataType === "Date" || propMetadata.DataType === "DateTime") {
+                formatter = ko.metadata.createDateFormatter(viewmodel, viewmodel[propMetadata.PropertyName]);
+            }
+            return formatter;
         }
 
         return {

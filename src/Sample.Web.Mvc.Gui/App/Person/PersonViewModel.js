@@ -19,12 +19,13 @@ app.person = function () {
         var self = this;
         ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
 
+        //These are created automagically ( by the mapToViewModelByMetadata)
         //self.FirstName = self.createObservable("FirstName");
         //self.LastName = self.createObservable("LastName");
         //self.EMail = self.createObservable("EMail");
-        self.SomeInt = self.createObservable("SomeInt");
-        self.SomeDecimal = self.createObservable("SomeDecimal");
-        self.BirthDate = self.createObservable("BirthDate");
+        //self.SomeInt = self.createObservable("SomeInt");
+        //self.SomeDecimal = self.createObservable("SomeDecimal");
+        //self.BirthDate = self.createObservable("BirthDate");
 
         //Address
         self.Address = ko.observable({
@@ -35,15 +36,14 @@ app.person = function () {
         self.Skills = ko.observableArray();
         self.Skills.create = function (metadata) {
             var vm = new Skill(metadata);
-            //vm._validation.displayValidation(true);
+            vm._validationContainer.displayValidation(true);
             return vm;
         }
 
-        //Formatted stuff goes on the formatted function
-        self.formatted = function () { };
-        self.formatted.SomeInt = ko.metadata.createIntegerFormatter(self.SomeInt);
-        self.formatted.SomeDecimal = ko.metadata.createDecimalFormatter(self.SomeDecimal, 4);
-        self.formatted.BirthDate = self.createDateFormatter(self.BirthDate);
+        //These are created automagically ( by the mapToViewModelByMetadata)
+        //self._formatted.SomeInt = ko.metadata.createIntegerFormatter(self.SomeInt);
+        //self._formatted.SomeDecimal = ko.metadata.createDecimalFormatter(self.SomeDecimal, 4);
+        //self._formatted.BirthDate = self.createDateFormatter(self.BirthDate);
 
         //self.isAllValid = ko.computed(function () {
         //    return self.isValid();
