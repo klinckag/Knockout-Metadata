@@ -15,6 +15,7 @@ namespace Sample.Web.Mvc.Gui.Models
 
         [Required]
         [StringLength(10)]
+        [Display(Name = "Street number")]
         public string Number { get; set; }
     }
 }

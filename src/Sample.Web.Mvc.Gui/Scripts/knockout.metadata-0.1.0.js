@@ -1,4 +1,13 @@
-﻿(function (factory) {
+﻿// Knockout-Metadata library v0.1.0
+// Author:      Geert Klinckaert (https://github.com/klinckag/Knockout-Metadata)
+// License:     MIT (http://www.opensource.org/licenses/mit-license.php)
+
+
+//Based on Knockout-Validation (https://github.com/Knockout-Contrib/Knockout-Validation)
+//Author:		Eric M. Barnard - @ericmbarnard								
+//License:		MIT (http://opensource.org/licenses/mit-license.php)		
+
+(function (factory) {
     // Module systems magic dance.
 
     //if (typeof require === "function" && typeof exports === "object" && typeof module === "object") {
@@ -89,46 +98,55 @@
 
     //#region API:..
     var api = (function () {
+        formatMessage = function (message, fieldname, params) {
+            if (typeof (message) === 'function') {
+                return message(params);
+            }
+            var m = message.replace(/\{0\}/gi, fieldname);
+            m = m.replace(/\{1\}/gi, params);
+            return m;
+        };
 
         createObservable = function (viewmodel, fieldName, initialValue) {
             if (initialValue === undefined) {
                 initialValue = null;
             }
             //Initialize the validation system
-            var observable = ko.observable(initialValue).extend({ metadata: viewmodel._validationContainer });
+            var metadataValidationOptions = {
+                viewModel: viewmodel,
+                fieldName: fieldName
+            }
+            var observable = ko.observable(initialValue).extend({ metadataValidation: metadataValidationOptions });
+
+            observable.extend({ validateInRequiredFields: { fieldName: fieldName, requiredFields: viewmodel._validationContainer.requiredFields } });
 
             var metadata = viewmodel.getMetadata(fieldName);
-            observable.fieldName = fieldName;
-            observable.displayName = metadata.DisplayName;
-
-            //observable.extend({ validateInRequiredFields: { fieldName: fieldName, requiredFields: viewmodel._validation.requiredFields } });
-
-            //if (metadata && metadata.DataType) {
-            //    if (metadata.DataType === "Int32") {
-            //        observable.extend({ validateInt32: true });
-            //    }
-            //    if (metadata.DataType === "Decimal") {
-            //        observable.extend({ validateFloat: true });
-            //    }
-            //    if (metadata.DataType === "Date") {
-            //        observable.extend({ validateDate: true });
-            //    }
-            //    if (metadata.DataType === "EmailAddress") {
-            //        observable.extend({ validateEmail: "Invalid email" });
-            //    }
-            //}
-            //for (i = 0; i < metadata.ValidationRules.length; i++) {
-            //    var rule = metadata.ValidationRules[i];
-            //    if (rule.Name === "length" && rule.Params.max) {
-            //        observable.extend({ validateMaxLength: rule.Params.max });
-            //    }
-            //    if (rule.Name === "length" && rule.Params.min) {
-            //        observable.extend({ validateMinLength: rule.Params.min });
-            //    }
-            //    if (rule.Name === "required") {
-            //        viewmodel._validation.requiredFields.push(fieldName);
-            //    }
-            //}
+            if (metadata && metadata.DataType) {
+                if (metadata.DataType === "Int32") {
+                    observable.extend({ validateNumberIsWhole: true });
+                }
+                if (metadata.DataType === "Decimal") {
+                    observable.extend({ validateNumber: true });
+                }
+                if (metadata.DataType === "Date") {
+                    observable.extend({ validateDate: true });
+                }
+                if (metadata.DataType === "EmailAddress") {
+                    observable.extend({ validateEmail: "Invalid email" });
+                }
+            }
+            for (i = 0; i < metadata.ValidationRules.length; i++) {
+                var rule = metadata.ValidationRules[i];
+                if (rule.Name === "length" && rule.Params.max) {
+                    observable.extend({ validateMaxLength: rule.Params.max });
+                }
+                if (rule.Name === "length" && rule.Params.min) {
+                    observable.extend({ validateMinLength: rule.Params.min });
+                }
+                if (rule.Name === "required") {
+                    viewmodel._validationContainer.requiredFields.push(fieldName);
+                }
+            }
 
             return observable;
         };
@@ -304,6 +322,7 @@
                 }
                 if (propMetadata.IsComplexType) {
                     if (propMetadata.IsListType) {
+                        //ListType
                         //Create the observableArray for our ListType
                         viewmodel[propMetadata.PropertyName] = ko.observableArray();
                         //Add items to observableArray
@@ -316,6 +335,7 @@
                         }
                     }
                     else {
+                        //ComplexType ( but not a list)
                         //Convention => 'create<DataType>' function is used to create an item
                         var vm = viewmodel._childs["create" + propMetadata.DataType](propMetadata)
                         var observableChild = ko.observable(vm);
@@ -324,6 +344,7 @@
                     }
                 }
                 else {
+                    //primary property
                     if (viewmodel[propMetadata.PropertyName] === undefined) {
                         //Create the observable
                         viewmodel[propMetadata.PropertyName] = viewmodel.createObservable(propMetadata.PropertyName);
@@ -356,17 +377,212 @@
                 formatter = ko.metadata.createDateFormatter(viewmodel, viewmodel[propMetadata.PropertyName]);
             }
             return formatter;
+        };
+
+        validateObservable = function (observable, modelValidationContainer) {
+            var i = 0,
+                rule, // the rule validator to execute
+                ctx, // the current Rule Context for the loop
+                ruleContexts = observable.validationRules, //cache for iterator
+                len = ruleContexts.length; //cache for iterator
+
+            observable.validationMessages.removeAll();
+            for (; i < len; i++) {
+
+                //get the Rule Context info to give to the core Rule
+                ctx = ruleContexts[i];
+
+                // checks an 'onlyIf' condition
+                if (ctx.condition && !ctx.condition())
+                    continue;
+
+                //get the core Rule to use for validation
+                rule = exports.validationRules[ctx.rule];
+
+                if (rule['async'] || ctx['async']) {
+                    //run async validation
+                    validateAsync(observable, rule, ctx);
+
+                } else {
+                    //run normal sync validation
+                    if (!validateSync(observable, modelValidationContainer, rule, ctx)) {
+                        //return false; //break out of the loop
+                    }
+                }
+            }
+            return true;
+        };
+
+        validateSync = function (observable, modelValidationContainer, rule, ctx) {
+            //default params is true, eg. required = true
+            var params = ctx.params === undefined ? true : ctx.params
+            //Execute the validator and see if its valid 
+            if (!rule.validator(observable(), params)) {
+                //not valid, so format the error message and stick it in the 'error' variable
+                var message = ko.metadata.formatMessage(ctx.message || rule.message, observable.displayName, ctx.params);
+                observable.validationMessages.push(message);
+                return false;
+            } else {
+                return true;
+            }
+        };
+
+        // addRule:
+        // This takes in a ko.observable and a Rule Context - which is just a rule name and params to supply to the validator
+        // ie: ko.validation.addRule(myObservable, {
+        //          rule: 'required',
+        //          params: true
+        //      });
+        //
+        addRule = function (observable, rule) {
+            observable.extend({ validatable: true });
+
+            //push a Rule Context to the observables local array of Rule Contexts
+            observable.validationRules.push(rule);
+            return observable;
+        };
+
+        addExtender = function (ruleName) {
+            ko.extenders[ruleName] = function (observable, params) {
+                //params can come in a few flavors
+                // 1. Just the params to be passed to the validator
+                // 2. An object containing the Message to be used and the Params to pass to the validator
+                // 3. A condition when the validation rule to be applied
+                //
+                // Example:
+                // var test = ko.observable(3).extend({
+                //      max: {
+                //          message: 'This special field has a Max of {0}',
+                //          params: 2,
+                //          onlyIf: function() {
+                //                      return specialField.IsVisible();
+                //                  }
+                //      }
+                //  )};
+                //
+                if (params.message || params.onlyIf) { //if it has a message or condition object, then its an object literal to use
+                    return addRule(observable, {
+                        rule: ruleName,
+                        message: params.message,
+                        params: utils.isEmptyVal(params.params) ? true : params.params,
+                        condition: params.onlyIf
+                    });
+                } else {
+                    return addRule(observable, {
+                        rule: ruleName,
+                        params: params
+                    });
+                }
+            };
+        };
+
+        // loops through all ko.validation.rules and adds them as extenders to ko.extenders
+        // root extenders optional, use 'validation' extender if would cause conflicts
+        registerExtenders = function () {
+            for (var ruleName in exports.validationRules) {
+                if (exports.validationRules.hasOwnProperty(ruleName)) {
+                    if (!ko.extenders[ruleName]) {
+                        addExtender(ruleName);
+                    }
+                }
+            }
+        };
+
+
+        realTypeOf = function (v) {
+            //http://joncom.be/code/realtypeof/
+            if (typeof (v) == "object") {
+                if (v === null) return "null";
+                if (v.constructor == (new Array).constructor) return "array";
+                if (v.constructor == (new Date).constructor) return "date";
+                if (v.constructor == (new RegExp).constructor) return "regex";
+                return "object";
+            }
+            return typeof (v);
+        }
+
+        formatJSON = function (oData, sIndent) {
+            //http://joncom.be/code/javascript-json-formatter/
+            if (arguments.length < 2) {
+                var sIndent = "";
+            }
+            var sIndentStyle = "&nbsp;&nbsp;&nbsp;&nbsp;";
+            var sDataType = realTypeOf(oData);
+
+            // open object
+            if (sDataType == "array") {
+                if (oData.length == 0) {
+                    return "[]";
+                }
+                var sHTML = "[";
+            } else {
+                var iCount = 0;
+                $.each(oData, function () {
+                    iCount++;
+                    return;
+                });
+                if (iCount == 0) { // object is empty
+                    return "{}";
+                }
+                var sHTML = "{";
+            }
+
+            // loop through items
+            var iCount = 0;
+            $.each(oData, function (sKey, vValue) {
+                if (iCount > 0) {
+                    sHTML += ",";
+                }
+                if (sDataType == "array") {
+                    sHTML += ("<BR/>" + sIndent + sIndentStyle);
+                } else {
+                    sHTML += ("<BR/>" + sIndent + sIndentStyle + "\"" + sKey + "\"" + ": ");
+                }
+
+                // display relevant data type
+                switch (realTypeOf(vValue)) {
+                    case "array":
+                    case "object":
+                        sHTML += formatJSON(vValue, (sIndent + sIndentStyle));
+                        break;
+                    case "boolean":
+                    case "number":
+                        sHTML += vValue.toString();
+                        break;
+                    case "null":
+                        sHTML += "null";
+                        break;
+                    case "string":
+                        sHTML += ("\"" + vValue + "\"");
+                        break;
+                    default:
+                        sHTML += ("TYPEOF: " + typeof (vValue));
+                }
+
+                // loop
+                iCount++;
+            });
+
+            // close object
+            if (sDataType == "array") {
+                sHTML += ("<BR/>" + sIndent + "]");
+            } else {
+                sHTML += ("<BR/>" + sIndent + "}");
+            }
+
+            // return
+            return sHTML;
         }
 
         return {
-            //formatMessage: formatMessage,
-            //registerExtenders: registerExtenders,
+            formatMessage: formatMessage,
+            registerExtenders: registerExtenders,
             createObservable: createObservable,
-            //validateObservable: validateObservable,
+            validateObservable: validateObservable,
             createIntegerFormatter: createIntegerFormatter,
             createDecimalFormatter: createDecimalFormatter,
             createDateFormatter: createDateFormatter,
-            //formatJSON: formatJSON,
+            formatJSON: formatJSON,
             getMetadata: getMetadata,
             mapToViewModelByMetadata: mapToViewModelByMetadata
             //isObservableArray: isObservableArray
@@ -376,41 +592,212 @@
     // expose api publicly
     ko.utils.extend(metadata, api);
 
+    //#region validationRules:..
+    metadata.validationRules = {};
+    metadata.validationRules["validateRequired"] = {
+        validator: function (val, required) {
+            var stringTrimRegEx = /^\s+|\s+$/g,
+                testVal;
+
+            if (val === undefined || val === null) {
+                return !required;
+            }
+
+            testVal = val;
+            if (typeof (val) === "string") {
+                testVal = val.replace(stringTrimRegEx, '');
+            }
+
+            // if they passed: { required: false }, then don't require this
+            if (!required) {
+                return true;
+            }
+
+            return ((testVal + '').length > 0);
+        },
+        message: '{0} is required.'
+    };
+    metadata.validationRules['validateMaxLength'] = {
+        validator: function (val, maxLength) {
+            if (val === undefined || val === null || val.length === undefined) {
+                return true;
+            }
+            else {
+                return val.length <= maxLength;
+            }
+        },
+        message: 'Please enter no more than {1} characters for {0}.'
+    };
+    metadata.validationRules['validateMinLength'] = {
+        validator: function (val, minLength) {
+            if (val === undefined || val === null || val.length === undefined) {
+                return true;
+            }
+            else {
+                return val.length >= minLength;
+            }
+        },
+        message: 'Please enter at least {1} characters for {0}.'
+    };
+    //EMail validation
+    metadata.validationRules["validateEmail"] = {
+        validator: function (value, validationMessage) {
+            var result = true;
+            if (value != undefined && value !== "") {
+                result = /^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))$/i.test(value);
+            }
+
+            return result;
+        },
+        message: "Please enter a valid email address for {0}."
+    }
+    //Validates if a number is a whole number.
+    metadata.validationRules["validateNumberIsWhole"] = {
+        validator: function (value, mustBeInt32) {
+            var result = true;
+            if (value !== undefined && value !== null) {
+                if (typeof value !== 'number') {
+                    result = false;
+                }
+                else {
+                    if (parseInt(value) !== value) {
+                        result = false;
+                    }
+                }
+            }
+            return result;
+        },
+        message: "{0} is not a valid number."
+    };
+    //Validates if a number is a whole number.
+    //metadata.validationRules["validateNumberIsWhole"] = {
+    //    validator: function (value, mustBeInt32) {
+    //        var intValue = value;
+    //        var floatValue = value;
+    //        var result = true;
+    //        if (value != undefined && typeof value !== 'number') {
+    //            intValue = Globalize.parseInt(value, 10, "en");
+    //            floatValue = Globalize.parseFloat(value, 10, "en");
+
+    //            result = false;
+    //            if (intValue && floatValue) {
+    //                if (intValue === floatValue) {
+    //                    result = true;
+    //                }
+    //            }
+    //        }
+
+    //        return result;
+    //    },
+    //    message: "{0} is not a valid number."
+    //};
+    //Float validation
+    metadata.validationRules["validateNumber"] = {
+        validator: function (value, validationMessage) {
+            var result = true;
+            if (value !== undefined && value !== null) {
+                if (typeof value !== 'number') {
+                    result = false;
+                }
+            }
+            return result;
+        },
+        message: "{0} is not a valid decimal."
+    }
+    //metadata.validationRules["validateFloat"] = {
+    //    validator: function (value, validationMessage) {
+    //        var floatValue = value,
+    //            result = true;
+    //        if (value != undefined && value !== "" && typeof value !== "number") {
+    //            floatValue = Globalize.parseFloat(value, 10, "en");
+
+    //            if (!floatValue) {
+    //                result = false;
+    //            }
+    //        }
+
+    //        return result;
+    //    },
+    //    message: "{0} is not a valid decimal."
+    //}
+    //Date validation
+    metadata.validationRules["validateDate"] = {
+        validator: function (value, mustBeDate) {
+            var dateValue = value;
+            if (value != undefined && value != "" && !(value instanceof Date)) {
+                dateValue = Globalize.parseDate(value, "en");
+            }
+
+            return dateValue;
+        },
+        message: "{0} is not a valid date."
+    };
+    //Required validation
+    metadata.validationRules["validateInRequiredFields"] = {
+        // The actual validation logic
+        validator: function (value, params) {
+            var result = true;
+            if (params.requiredFields.indexOf(params.fieldName) >= 0 && (value === undefined || value == null || value == "")) {
+                result = false;
+            }
+            return result;
+        },
+        message: "{0} is required."
+    };
+    //now register all of these!
+    (function () {
+        metadata.registerExtenders();
+    }());
+
+    //#endregion validationRules:..
+
     //Enables the metadata framework for the given observable
     //This one should be called before other 'metadata' extenders
-    ko.extenders.metadata = function (observable, modelValidationContainer) {
-        observable.validationMessages = ko.observableArray();
-        observable.isValid = ko.computed(function () {
-            return observable.validationMessages().length === 0;
+    ko.extenders.metadataValidation = function (target, metadataValidationOptions) {
+
+        var viewModel = metadataValidationOptions.viewModel;
+        var modelValidationContainer = metadataValidationOptions.viewModel._validationContainer;
+
+        var propertyMetadata = viewModel.getMetadata(metadataValidationOptions.fieldName);
+        var modelMetaData = viewModel._metadataContainer.data;
+
+        target.fieldName = metadataValidationOptions.fieldName;
+        target.displayName = propertyMetadata.DisplayName;
+
+        target.validationMessages = ko.observableArray();
+
+        target.isValid = ko.computed(function () {
+            return target.validationMessages().length === 0;
         });
-        observable.isValidForUi = ko.computed(function () {
-            var isValid = observable.isValid();
+
+        target.isValidForUi = ko.computed(function () {
+            var isValid = target.isValid();
             var displayValidation = modelValidationContainer.displayValidation();
             if (displayValidation) {
                 return isValid;
             }
             return true;
         });
-        observable.validationMessage = ko.computed(function () {
-            return observable.validationMessages().join("\r\n");
+
+        target.validationMessage = ko.computed(function () {
+            return target.validationMessages().join("\r\n");
         });
 
-        // array of all rules for the given observable
-        observable.validationRules = [];
+        // array of all rules for the given target
+        target.validationRules = [];
 
         // check the observable against all attached validators
-        observable.validate = function () {
-            //TODO enable ....
-            //ko.metadata.validateObservable(observable, modelValidationContainer);
+        target.validate = function () {
+            ko.metadata.validateObservable(target, modelValidationContainer);
         };
 
         // validate when it changes
-        observable.subscribe(observable.validate);
+        target.subscribe(target.validate);
 
-        // push valid checking function to the model
-        modelValidationContainer.validationTargets.push(observable);
+        // push target to the model
+        modelValidationContainer.validationTargets.push(target);
 
-        return observable;
+        return target;
     };
 
     ko.bindingHandlers.errorBinding = {

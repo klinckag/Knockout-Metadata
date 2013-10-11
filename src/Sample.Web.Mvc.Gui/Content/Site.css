@@ -754,3 +754,9 @@ tr.pager td {
             margin: 0;
         }
 }
+
+.kov_fieldValidationIndicator{
+    cursor:pointer;
+    color:red;
+    font-weight: bold;
+}

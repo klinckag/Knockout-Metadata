@@ -44,9 +44,12 @@
 </div>
 <!-- /ko -->
 
-<div>
-    @Html.ActionLink("Back to List", "Index")
-</div>
+<ul data-bind="foreach: $root._validationContainer.validationMessages">
+    <li data-bind="text: message"></li>
+</ul>
+
+<div>Metadata</div>
+<div id="ko_debug_metadata" data-bind="html: ko.metadata.formatJSON(ko.toJS($root._metadataContainer.data))" style="height: 200px; overflow-y: scroll; border: solid"></div>
 
 @section Scripts {
     @Scripts.Render("~/App/Person/PersonViewModel.js")
