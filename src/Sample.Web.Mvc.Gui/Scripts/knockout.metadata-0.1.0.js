@@ -192,21 +192,26 @@
             //create a writeable computed observable to intercept writes to our observable
             var formats;
             if (!format) {
+                //We want to support short date short time (d t) and short date long time (d T) and ... to parse datetime input
+                //TODO provide even more valid formats for parsing
                 var propMetadata = viewModel.getMetadata(observable.fieldName);
                 if (propMetadata.DataType === "Date") {
-                    format = Globalize.expandFormat("d");
                     formats = [0];
-                    formats[0] = format;
+
+                    formats[0] = globalizeExpandFormat("d");
+
+                    format = formats[0]
                 }
                 if (propMetadata.DataType === "DateTime") {
                     formats = [1];
-                    formats[0] = Globalize.expandFormat("d");
-                    formats[0] = formats[0] + " ";
-                    formats[0] = formats[0] + Globalize.expandFormat("t");
 
-                    formats[1] = Globalize.expandFormat("d");
+                    formats[0] = globalizeExpandFormat("d");
+                    formats[0] = formats[0] + " ";
+                    formats[0] = formats[0] + globalizeExpandFormat("t");
+
+                    formats[1] = globalizeExpandFormat("d");
                     formats[1] = formats[1] + " ";
-                    formats[1] = formats[1] + Globalize.expandFormat("T");
+                    formats[1] = formats[1] + globalizeExpandFormat("T");
 
                     format = formats[0]
                 }
@@ -247,6 +252,30 @@
             return result;
         };
 
+        //expandFormat is not public on Globalize ...
+        globalizeExpandFormat = function (format, cultureSelector) {
+            var culture = Globalize.findClosestCulture(cultureSelector);
+            var cal = culture.calendar;
+
+            // expands unspecified or single character date formats into the full pattern.
+            format = format || "F";
+            var pattern,
+                patterns = cal.patterns,
+                len = format.length;
+            if (len === 1) {
+                pattern = patterns[format];
+                if (!pattern) {
+                    throw "Invalid date format string \'" + format + "\'.";
+                }
+                format = pattern;
+            }
+            else if (len === 2 && format.charAt(0) === "%") {
+                // %X escape format -- intended as a custom format string that is only one character, not a built-in format.
+                format = format.charAt(1);
+            }
+            return format;
+        }
+
         getMetadata = function (viewModel, propertyNames) {
             var propertyNameToGet = propertyNames.shift();
             var match = ko.utils.arrayFirst(viewModel.Properties, function (item) {
@@ -275,17 +304,23 @@
                 }
                 if (propMetadata.IsComplexType) {
                     if (propMetadata.IsListType) {
-                        for (var j=0; j < dataValue.length; j++) {
+                        //Create the observableArray for our ListType
+                        viewmodel[propMetadata.PropertyName] = ko.observableArray();
+                        //Add items to observableArray
+                        for (var j = 0; j < dataValue.length; j++) {
                             var listItem = dataValue[j];
-                            //Convention => 'create' function is used to create and map an item in a nested list
-                            var vm = viewmodel[propMetadata.PropertyName].create(propMetadata.ListTypeViewModelMetadata);
+                            //Convention => 'create<DataType>' function is used to create an item
+                            var vm = viewmodel._childs["create" + propMetadata.ListTypeViewModelMetadata.DataType](propMetadata.ListTypeViewModelMetadata);
                             mapToViewModelByMetadataInternal(listItem, vm, propMetadata.ListTypeViewModelMetadata);
                             viewmodel[propMetadata.PropertyName].push(vm);
                         }
                     }
                     else {
-                        //TODO : should use a convention based 'create' function ?
-                        mapToViewModelByMetadataInternal(dataValue, viewmodel[propMetadata.PropertyName](), propMetadata);
+                        //Convention => 'create<DataType>' function is used to create an item
+                        var vm = viewmodel._childs["create" + propMetadata.DataType](propMetadata)
+                        var observableChild = ko.observable(vm);
+                        mapToViewModelByMetadataInternal(dataValue, vm, propMetadata);
+                        viewmodel[propMetadata.PropertyName] = observableChild;
                     }
                 }
                 else {

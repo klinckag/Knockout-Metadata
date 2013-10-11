@@ -4,20 +4,32 @@ app.person = function () {
         var self = this;
         ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
 
-        self.Street = self.createObservable("Street");
+        //These are created automagically ( by the mapToViewModelByMetadata)
+        //self.Street = self.createObservable("Street");
     };
 
     Skill = function (metadata) {
         var self = this;
         ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
 
-        self.Name = self.createObservable("Name");
-        self.LevelOfExpertise = self.createObservable("LevelOfExpertise");
+        //These are created automagically ( by the mapToViewModelByMetadata)
+        //self.Name = self.createObservable("Name");
+        //self.LevelOfExpertise = self.createObservable("LevelOfExpertise");
     };
 
     Person = function (metadata) {
         var self = this;
         ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
+
+        //TODO find a better way to handle this
+        //helpers to create instances of child viewmodels go on the _childs function
+        self._childs = function () { }
+        self._childs.createAddress = function (metadata) {
+            return new Address(metadata)
+        }
+        self._childs.createSkill = function (metadata) {
+            return new Skill(metadata)
+        }
 
         //These are created automagically ( by the mapToViewModelByMetadata)
         //self.FirstName = self.createObservable("FirstName");
@@ -27,23 +39,27 @@ app.person = function () {
         //self.SomeDecimal = self.createObservable("SomeDecimal");
         //self.BirthDate = self.createObservable("BirthDate");
 
+        //These are created automagically ( by the mapToViewModelByMetadata)
         //Address
-        self.Address = ko.observable({
-            Street: self.createObservable("Address.Street")
-        });
-
-        //Skills
-        self.Skills = ko.observableArray();
-        self.Skills.create = function (metadata) {
-            var vm = new Skill(metadata);
-            vm._validationContainer.displayValidation(true);
-            return vm;
-        }
+        //self.Address = ko.observable({
+        //    Street: self.createObservable("Address.Street")
+        //});
 
         //These are created automagically ( by the mapToViewModelByMetadata)
+        //Skills
+        //self.Skills = ko.observableArray();
+        //self.Skills.create = function (metadata) {
+        //    var vm = new Skill(metadata);
+        //    vm._validationContainer.displayValidation(true);
+        //    return vm;
+        //}
+
+        //These are created automagically ( by the mapToViewModelByMetadata)
+        //Formatted stuff
         //self._formatted.SomeInt = ko.metadata.createIntegerFormatter(self.SomeInt);
         //self._formatted.SomeDecimal = ko.metadata.createDecimalFormatter(self.SomeDecimal, 4);
         //self._formatted.BirthDate = self.createDateFormatter(self.BirthDate);
+
 
         //self.isAllValid = ko.computed(function () {
         //    return self.isValid();

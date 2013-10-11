@@ -25,7 +25,8 @@ namespace Sample.Web.Mvc.Gui.Api
                 SomeInt = 66,
                 Address = new Address()
                 {
-                    Street = "SomeStreet"
+                    Street = "SomeStreet",
+                    Number = "817"
                 },
                 Skills = new List<Skill>()
                 {

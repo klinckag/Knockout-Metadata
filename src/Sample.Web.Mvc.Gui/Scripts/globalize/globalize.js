@@ -1581,10 +1581,4 @@ Globalize.culture = function( cultureSelector ) {
 	// getter
 	return this.findClosestCulture( cultureSelector ) || this.cultures[ "default" ];
 };
-
-Globalize.expandFormat = function (format, cultureSelector) {
-    var culture = this.findClosestCulture(cultureSelector);
-    return expandFormat(culture.calendar, format);
-};
-
 }( this ));

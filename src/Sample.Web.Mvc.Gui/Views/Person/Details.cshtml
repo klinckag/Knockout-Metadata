@@ -29,6 +29,20 @@
 <div data-bind="labelBinding: BirthDate">BirthDate</div>
 <input id="BirthDate" type="text" data-bind="value: _formatted.BirthDate" /><div data-bind="errorBinding: BirthDate"></div>
 <br />
+<div data-bind="labelBinding: Address().Street"></div>
+<input id="Address.Street" type="text" data-bind="value: Address().Street" /><div data-bind="errorBinding: Address().Street"></div>
+<br />
+<div data-bind="labelBinding: Address().Number"></div>
+<input id="Address.Number" type="text" data-bind="value: Address().Number" /><div data-bind="errorBinding: Address().Number"></div>
+<br />
+
+<div>Skills</div>
+<!-- ko foreach: $data.Skills -->
+<div>
+    <div data-bind="labelBinding: $data.Name"></div>
+    <input type="text" data-bind="value: $data.Name" /><div data-bind="errorBinding: $data.Name"></div>
+</div>
+<!-- /ko -->
 
 <div>
     @Html.ActionLink("Back to List", "Index")
