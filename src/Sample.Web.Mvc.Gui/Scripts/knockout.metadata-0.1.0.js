@@ -18,7 +18,7 @@
     //    define(["knockout", "exports"], factory);
     //} else {
     //    // <script> tag: use the global `ko` object, attaching a `mapping` property
-    //    factory(ko, ko.metadata = {});
+    //    factory(ko, Globalize, ko.metadata = {});
     //}
     factory(ko, Globalize, ko.metadata = {});
 }(function (ko, Globalize, exports) {
@@ -34,7 +34,10 @@
 
     var defaults = {
         //useMetadataErrorMessage: true => uses the ErrorMessage specified by the metaData, false => uses the ErrorMessage specified by knockout.metadata
-        useMetadataErrorMessage: true
+        useMetadataErrorMessage: true,
+        decorateElement: true,
+        errorsAsTitle: true,
+        errorElementClass: 'input-validation-error'
     }
 
     var configuration = ko.utils.extend({}, defaults);
@@ -121,6 +124,21 @@
             },
             trim: function (val) {
                 return val.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+            },
+            hasAttribute: function (node, attr) {
+                return node.getAttribute(attr) !== null;
+            },
+            getAttribute: function (element, attr) {
+                return element.getAttribute(attr);
+            },
+            getOriginalElementTitle: function (element) {
+                var savedOriginalTitle = utils.getAttribute(element, 'data-orig-title'),
+                    currentTitle = element.title,
+                    hasSavedOriginalTitle = utils.hasAttribute(element, 'data-orig-title');
+
+
+                return hasSavedOriginalTitle ?
+                    savedOriginalTitle : currentTitle;
             }
         }
     }());
@@ -249,6 +267,10 @@
                 }
             })
 
+            result.unFormattedObservable =  ko.computed(function () {
+                return observable;
+            });
+
             return result;
         };
 
@@ -309,6 +331,10 @@
                     }
                 }
             })
+
+            result.unFormattedObservable = ko.computed(function () {
+                return observable;
+            });
 
             return result;
         };
@@ -843,6 +869,67 @@
 
         return target;
     };
+
+    ko.bindingHandlers.dataValue = {
+        init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+            var accessor = valueAccessor();
+
+            ko.applyBindingsToNode(element, { value: valueAccessor() });
+            ko.applyBindingsToNode(element, { validationElement: valueAccessor() });
+        },
+        update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
+            // This will be called once when the binding is first applied to an element,
+            // and again whenever the associated observable changes value.
+            // Update the DOM element based on the supplied values here.
+        }
+    }
+
+    ko.bindingHandlers.validationElement = {
+        update: function (element, valueAccessor) {
+            var observable = valueAccessor();
+            //if we are binding to a 'formatted' observable, we need to work with the actual observable
+            if(observable.unFormattedObservable) {
+                observable = observable.unFormattedObservable()
+            }
+            //config = ko.validation.utils.getConfigOptions(element),
+            var config = ko.metadata.configuration;
+            var val = ko.utils.unwrapObservable(observable);
+            var isValid = observable.isValid();
+
+            // create an evaluator function that will return something like:
+            // css: { validationElement: true }
+            var cssSettingsAccessor = function () {
+                var css = {};
+                var shouldShow = !isValid;
+                if (!config.decorateElement) {
+                    shouldShow = false;
+                }
+
+                // css: { validationElement: false }
+                css[config.errorElementClass] = shouldShow;
+
+                return css;
+            };
+
+            //add or remove class on the element;
+            ko.bindingHandlers.css.update(element, cssSettingsAccessor);
+            if (!config.errorsAsTitle) { return; }
+
+            var origTitle = utils.getAttribute(element, 'data-orig-title'),
+                elementTitle = element.title,
+                titleIsErrorMsg = utils.getAttribute(element, 'data-orig-title') === "true";
+
+            var errorMsgTitleAccessor = function () {
+                if (!isValid) {
+                    return { title: observable.validationMessage, 'data-orig-title': utils.getOriginalElementTitle(element) };
+                } else {
+                    return { title: utils.getOriginalElementTitle(element), 'data-orig-title': null };
+                }
+            };
+            ko.bindingHandlers.attr.update(element, errorMsgTitleAccessor);
+        }
+    };
+
 
     ko.bindingHandlers.errorBinding = {
         init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
