@@ -44,9 +44,11 @@
 </div>
 <!-- /ko -->
 
-<ul data-bind="foreach: $root._validationContainer.validationMessages">
+<ul data-bind="foreach: $data._validationContainer.validationMessages">
     <li data-bind="text: message"></li>
 </ul>
+
+<div data-bind="html: ko.metadata.formatJSON(ko.toJS($root._validationContainer.validationMessages))"></div>
 
 <div>Metadata</div>
 <div id="ko_debug_metadata" data-bind="html: ko.metadata.formatJSON(ko.toJS($root._metadataContainer.data))" style="height: 200px; overflow-y: scroll; border: solid"></div>

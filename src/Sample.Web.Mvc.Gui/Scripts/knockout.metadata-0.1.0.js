@@ -42,9 +42,20 @@
             //Validation specific stuff goes on the _validationContainer function.
             self._validationContainer = function () { };
             self._validationContainer.displayValidation = ko.observable(true);
-            self._validationContainer.validationTargets = [];
+            self._validationContainer.validationTargets = ko.observableArray([]);
             self._validationContainer.requiredFields = ko.observableArray();
-            self._validationContainer.validationMessages = ko.observableArray();
+            self._validationContainer.validationMessages = ko.computed(function () {
+                var i = 0;
+                var messages = [];
+                for (i; i < self._validationContainer.validationTargets().length; i++) {
+                    var observable = self._validationContainer.validationTargets()[i];
+                    var j = 0;
+                    for (j; j < observable.validationMessages().length; j++) {
+                        messages.push({ fieldName: observable.fieldName, message: observable.validationMessages()[j] });
+                    }
+                }
+                return messages;
+            });
             self._validationContainer.removeValidationMessagesForField = function (fieldName) {
                 self._validationContainer.validationMessages.remove(function (item) {
                     return item.fieldName === fieldName;
