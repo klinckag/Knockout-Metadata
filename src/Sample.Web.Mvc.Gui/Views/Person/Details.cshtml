@@ -14,6 +14,9 @@
 <div data-bind="labelBinding: FirstName">FirstName</div>
 <input id="FirstName" type="text" data-bind="value: FirstName" /><div data-bind="errorBinding: FirstName"></div>
 <br />
+<div>FullName</div>
+<div data-bind="text: FullName"></div>
+<br />
 <div data-bind="labelBinding: LastName">LastName</div>
 <input id="LastName" type="text" data-bind="value: LastName" /><div data-bind="errorBinding: LastName"></div>
 <br />
@@ -63,9 +66,12 @@
 
             var decimalseparator = Globalize.culture().numberFormat["."];
 
+            ko.metadata.configuration.useMetadataErrorMessage = true;
+
             $.getJSON("/api/Person/121").success(function(data){
                 var personVm = new app.person.Person(metadata);
                 ko.metadata.mapToViewModelByMetadata(data, personVm);
+                personVm.addComputed();
                 personVm.isValid();
                 ko.applyBindings(personVm);
             }).error(function(data){

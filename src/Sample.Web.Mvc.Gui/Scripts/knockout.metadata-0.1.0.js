@@ -32,6 +32,14 @@
     var metadata = exports;
     ko.metadata = metadata;
 
+    var defaults = {
+        //true : uses the ErrorMessage specified by the metaData, false: uses the ErrorMessage specified by knockout.metadata
+        useMetadataErrorMessage: true
+    }
+
+    var configuration = ko.utils.extend({}, defaults);
+    ko.metadata.configuration = configuration;
+
     //#region ViewModelBase:..
     //BaseViewModel which ViewModels should extend.
     //   It provides basic functionality for validation and metadata
@@ -88,15 +96,6 @@
                 }
                 return isvalid;
             };
-
-            // Create an observable with all validation related stuff attached.
-            self.createObservable = function (fieldName, initialValue) {
-                return ko.metadata.createObservable(self, fieldName, initialValue);
-            };
-
-            self.createDateFormatter = function (observable, format) {
-                return ko.metadata.createDateFormatter(self, observable, format);
-            }
         };
 
         return {
@@ -106,6 +105,22 @@
     // Expose
     ko.utils.extend(metadata, vmb);
     //#endregion ViewModelBase:..
+
+    var utils = (function () {
+        return {
+            isEmptyVal: function (val) {
+                if (val === undefined) {
+                    return true;
+                }
+                if (val === null) {
+                    return true;
+                }
+                if (val === "") {
+                    return true;
+                }
+            }
+        }
+    }());
 
     //#region API:..
     var api = (function () {
@@ -129,33 +144,50 @@
             }
             var observable = ko.observable(initialValue).extend({ metadataValidation: metadataValidationOptions });
 
-            observable.extend({ validateInRequiredFields: { fieldName: fieldName, requiredFields: viewmodel._validationContainer.requiredFields } });
+            //Required fields are added to a collection, so we can easily add or remove required fields.
+            var validateInRequiredFieldsOptions = {
+                fieldName: fieldName,
+                requiredFields: viewmodel._validationContainer.requiredFields
+            };
+            observable.extend({ validateInRequiredFields: validateInRequiredFieldsOptions });
 
             var metadata = viewmodel.getMetadata(fieldName);
             if (metadata && metadata.DataType) {
-                if (metadata.DataType === "Int32") {
-                    observable.extend({ validateNumberIsWhole: true });
-                }
-                if (metadata.DataType === "Decimal") {
-                    observable.extend({ validateNumber: true });
-                }
-                if (metadata.DataType === "Date") {
-                    observable.extend({ validateDate: true });
-                }
-                if (metadata.DataType === "EmailAddress") {
-                    observable.extend({ validateEmail: "Invalid email" });
+                switch (metadata.DataType) {
+                    case "Int16":
+                    case "Int32":
+                    case "Int64":
+                        observable.extend({ validateNumberIsWhole: true });
+                        break;
+                    case "Decimal":
+                        observable.extend({ validateNumber: true });
+                        break;
+                    case "Date":
+                        observable.extend({ validateDate: true });
+                        break;
+                    case "EmailAddress":
+                        observable.extend({ validateEmail: "Invalid email" });
+                        break;
                 }
             }
             for (i = 0; i < metadata.ValidationRules.length; i++) {
                 var rule = metadata.ValidationRules[i];
+                var extender, extenderParams;
                 if (rule.Name === "length" && rule.Params.max) {
-                    observable.extend({ validateMaxLength: rule.Params.max });
+                    extenderParams = { params: rule.Params.max }
+                    extender = { validateMaxLength: extenderParams }
                 }
                 if (rule.Name === "length" && rule.Params.min) {
                     observable.extend({ validateMinLength: rule.Params.min });
                 }
                 if (rule.Name === "required") {
                     viewmodel._validationContainer.requiredFields.push(fieldName);
+                }
+                if (extender) {
+                    if (configuration.useMetadataErrorMessage && rule.ErrorMessage && rule.ErrorMessage !== '') {
+                        extenderParams.message = rule.ErrorMessage;
+                    }
+                    observable.extend(extender);
                 }
             }
 
@@ -224,23 +256,20 @@
                 //We want to support short date short time (d t) and short date long time (d T) and ... to parse datetime input
                 //TODO provide even more valid formats for parsing
                 var propMetadata = viewModel.getMetadata(observable.fieldName);
+                var shortDateFormat = globalizeExpandFormat("d");
+                var shortTimeFormat = globalizeExpandFormat("t");
+                var longTimeFormat = globalizeExpandFormat("T");
+
                 if (propMetadata.DataType === "Date") {
                     formats = [0];
-
-                    formats[0] = globalizeExpandFormat("d");
+                    formats[0] = shortDateFormat;
 
                     format = formats[0]
                 }
                 if (propMetadata.DataType === "DateTime") {
                     formats = [1];
-
-                    formats[0] = globalizeExpandFormat("d");
-                    formats[0] = formats[0] + " ";
-                    formats[0] = formats[0] + globalizeExpandFormat("t");
-
-                    formats[1] = globalizeExpandFormat("d");
-                    formats[1] = formats[1] + " ";
-                    formats[1] = formats[1] + globalizeExpandFormat("T");
+                    formats[0] = shortDateFormat + " " + shortTimeFormat;
+                    formats[1] = shortDateFormat + " " + longTimeFormat;
 
                     format = formats[0]
                 }
@@ -328,7 +357,7 @@
             for (var i = 0; i < metadata.Properties.length; i++) {
                 var propMetadata = metadata.Properties[i];
                 var dataValue = null;
-                if (data[propMetadata.PropertyName]) {
+                if (data[propMetadata.PropertyName] !== undefined) {
                     dataValue = data[propMetadata.PropertyName]
                 }
                 if (propMetadata.IsComplexType) {
@@ -358,7 +387,7 @@
                     //primary property
                     if (viewmodel[propMetadata.PropertyName] === undefined) {
                         //Create the observable
-                        viewmodel[propMetadata.PropertyName] = viewmodel.createObservable(propMetadata.PropertyName);
+                        viewmodel[propMetadata.PropertyName] = createObservable(viewmodel, propMetadata.PropertyName);
                     }
                     //And set the value ( with a special case for Dates )
                     if (propMetadata.DataType === "Date" || propMetadata.DataType === "DateTime") {
@@ -446,6 +475,7 @@
         //      });
         //
         addRule = function (observable, rule) {
+            //TODO extender not yet available
             observable.extend({ validatable: true });
 
             //push a Rule Context to the observables local array of Rule Contexts
@@ -481,7 +511,7 @@
                 } else {
                     return addRule(observable, {
                         rule: ruleName,
-                        params: params
+                        params: params.params || params
                     });
                 }
             };

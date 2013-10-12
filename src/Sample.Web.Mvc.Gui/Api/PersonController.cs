@@ -19,6 +19,7 @@ namespace Sample.Web.Mvc.Gui.Api
             return new Person()
             {
                 FirstName = "Geert",
+                LastName = "",
                 EMail = "Bla.net",
                 BirthDate = new DateTime(2010, 1, 1),
                 SomeDecimal = (decimal)10.5,

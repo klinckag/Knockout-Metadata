@@ -16,6 +16,7 @@ namespace Sample.Web.Mvc.Gui.Models
         [Display(Name = "Voornaam")]
         public string FirstName { get; set; }
 
+        [Required]
         [StringLength(50, MinimumLength = 10)]
         [Display(Name = "Famillienaam")]
         public string LastName { get; set; }

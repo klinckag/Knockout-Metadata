@@ -61,6 +61,14 @@ app.person = function () {
         //self._formatted.BirthDate = self.createDateFormatter(self.BirthDate);
 
 
+        //Computed observables must be added after the mapToViewModelByMetadata() has been called
+        //  mapToViewModelByMetadata dynamically creates the viewModel and the observables are available only after the mapping is done
+        self.addComputed = function () {
+            self.FullName = ko.computed(function () {
+                return self.FirstName() + ' ' + self.LastName();
+            });
+        }
+
         //self.isAllValid = ko.computed(function () {
         //    return self.isValid();
         //});
