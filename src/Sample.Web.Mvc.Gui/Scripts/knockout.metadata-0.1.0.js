@@ -33,7 +33,7 @@
     ko.metadata = metadata;
 
     var defaults = {
-        //true : uses the ErrorMessage specified by the metaData, false: uses the ErrorMessage specified by knockout.metadata
+        //useMetadataErrorMessage: true => uses the ErrorMessage specified by the metaData, false => uses the ErrorMessage specified by knockout.metadata
         useMetadataErrorMessage: true
     }
 
@@ -118,6 +118,9 @@
                 if (val === "") {
                     return true;
                 }
+            },
+            trim: function (val) {
+                return val.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
             }
         }
     }());
@@ -152,8 +155,8 @@
             observable.extend({ validateInRequiredFields: validateInRequiredFieldsOptions });
 
             var metadata = viewmodel.getMetadata(fieldName);
-            if (metadata && metadata.DataType) {
-                switch (metadata.DataType) {
+            if (metadata && metadata.dataType) {
+                switch (metadata.dataType) {
                     case "Int16":
                     case "Int32":
                     case "Int64":
@@ -170,22 +173,22 @@
                         break;
                 }
             }
-            for (i = 0; i < metadata.ValidationRules.length; i++) {
-                var rule = metadata.ValidationRules[i];
+            for (i = 0; i < metadata.validationRules.length; i++) {
+                var rule = metadata.validationRules[i];
                 var extender, extenderParams;
-                if (rule.Name === "length" && rule.Params.max) {
-                    extenderParams = { params: rule.Params.max }
+                if (rule.Name === "length" && rule.params.max) {
+                    extenderParams = { params: rule.params.max }
                     extender = { validateMaxLength: extenderParams }
                 }
-                if (rule.Name === "length" && rule.Params.min) {
-                    observable.extend({ validateMinLength: rule.Params.min });
+                if (rule.Name === "length" && rule.params.min) {
+                    observable.extend({ validateMinLength: rule.params.min });
                 }
                 if (rule.Name === "required") {
                     viewmodel._validationContainer.requiredFields.push(fieldName);
                 }
                 if (extender) {
-                    if (configuration.useMetadataErrorMessage && rule.ErrorMessage && rule.ErrorMessage !== '') {
-                        extenderParams.message = rule.ErrorMessage;
+                    if (configuration.useMetadataErrorMessage && rule.errorMessage && rule.errorMessage !== '') {
+                        extenderParams.message = rule.errorMessage;
                     }
                     observable.extend(extender);
                 }
@@ -260,13 +263,13 @@
                 var shortTimeFormat = globalizeExpandFormat("t");
                 var longTimeFormat = globalizeExpandFormat("T");
 
-                if (propMetadata.DataType === "Date") {
+                if (propMetadata.dataType === "Date") {
                     formats = [0];
                     formats[0] = shortDateFormat;
 
                     format = formats[0]
                 }
-                if (propMetadata.DataType === "DateTime") {
+                if (propMetadata.dataType === "DateTime") {
                     formats = [1];
                     formats[0] = shortDateFormat + " " + shortTimeFormat;
                     formats[1] = shortDateFormat + " " + longTimeFormat;
@@ -334,10 +337,10 @@
             return format;
         }
 
-        getMetadata = function (viewModel, propertyNames) {
+        getMetadata = function (metadata, propertyNames) {
             var propertyNameToGet = propertyNames.shift();
-            var match = ko.utils.arrayFirst(viewModel.Properties, function (item) {
-                return item.PropertyName === propertyNameToGet;
+            var match = ko.utils.arrayFirst(metadata.properties, function (item) {
+                return item.propertyName === propertyNameToGet;
             });
 
             if (propertyNames.length !== 0) {
@@ -354,52 +357,52 @@
 
         mapToViewModelByMetadataInternal = function (data, viewmodel, metadata) {
             //Loop metadata for all the Properties of the entity
-            for (var i = 0; i < metadata.Properties.length; i++) {
-                var propMetadata = metadata.Properties[i];
+            for (var i = 0; i < metadata.properties.length; i++) {
+                var propMetadata = metadata.properties[i];
                 var dataValue = null;
-                if (data[propMetadata.PropertyName] !== undefined) {
-                    dataValue = data[propMetadata.PropertyName]
+                if (data[propMetadata.propertyName] !== undefined) {
+                    dataValue = data[propMetadata.propertyName]
                 }
-                if (propMetadata.IsComplexType) {
-                    if (propMetadata.IsListType) {
+                if (propMetadata.isComplexType) {
+                    if (propMetadata.isListType) {
                         //ListType
                         //Create the observableArray for our ListType
-                        viewmodel[propMetadata.PropertyName] = ko.observableArray();
+                        viewmodel[propMetadata.propertyName] = ko.observableArray();
                         //Add items to observableArray
                         for (var j = 0; j < dataValue.length; j++) {
                             var listItem = dataValue[j];
                             //Convention => 'create<DataType>' function is used to create an item
-                            var vm = viewmodel._childs["create" + propMetadata.ListTypeViewModelMetadata.DataType](propMetadata.ListTypeViewModelMetadata);
-                            mapToViewModelByMetadataInternal(listItem, vm, propMetadata.ListTypeViewModelMetadata);
-                            viewmodel[propMetadata.PropertyName].push(vm);
+                            var vm = viewmodel._childs["create" + propMetadata.listTypeViewModelMetadata.dataType](propMetadata.listTypeViewModelMetadata);
+                            mapToViewModelByMetadataInternal(listItem, vm, propMetadata.listTypeViewModelMetadata);
+                            viewmodel[propMetadata.propertyName].push(vm);
                         }
                     }
                     else {
                         //ComplexType ( but not a list)
                         //Convention => 'create<DataType>' function is used to create an item
-                        var vm = viewmodel._childs["create" + propMetadata.DataType](propMetadata)
+                        var vm = viewmodel._childs["create" + propMetadata.dataType](propMetadata)
                         var observableChild = ko.observable(vm);
                         mapToViewModelByMetadataInternal(dataValue, vm, propMetadata);
-                        viewmodel[propMetadata.PropertyName] = observableChild;
+                        viewmodel[propMetadata.propertyName] = observableChild;
                     }
                 }
                 else {
                     //primary property
-                    if (viewmodel[propMetadata.PropertyName] === undefined) {
+                    if (viewmodel[propMetadata.propertyName] === undefined) {
                         //Create the observable
-                        viewmodel[propMetadata.PropertyName] = createObservable(viewmodel, propMetadata.PropertyName);
+                        viewmodel[propMetadata.propertyName] = createObservable(viewmodel, propMetadata.propertyName);
                     }
                     //And set the value ( with a special case for Dates )
-                    if (propMetadata.DataType === "Date" || propMetadata.DataType === "DateTime") {
+                    if (propMetadata.dataType === "Date" || propMetadata.dataType === "DateTime") {
                         dataValue = Globalize.parseDate(dataValue, "yyyy-MM-ddTHH:mm:ss");
                         //compensate timezoneoffset
                         //value.setUTCMinutes(value.getMinutes() - value.getTimezoneOffset());
                     }
-                    viewmodel[propMetadata.PropertyName](dataValue);
+                    viewmodel[propMetadata.propertyName](dataValue);
                     //create and add a formatter if needed/possible
                     var formatter = createFormatter(viewmodel, propMetadata);
                     if (formatter) {
-                        viewmodel._formatted[propMetadata.PropertyName] = formatter;
+                        viewmodel._formatted[propMetadata.propertyName] = formatter;
                     }
                 }
             }
@@ -407,14 +410,14 @@
 
         createFormatter = function (viewmodel, propMetadata) {
             var formatter = null;
-            if (propMetadata.DataType === "Int32") {
-                formatter = ko.metadata.createIntegerFormatter(viewmodel[propMetadata.PropertyName]);
+            if (propMetadata.dataType === "Int32") {
+                formatter = ko.metadata.createIntegerFormatter(viewmodel[propMetadata.propertyName]);
             }
-            if (propMetadata.DataType === "Decimal") {
-                formatter = ko.metadata.createDecimalFormatter(viewmodel[propMetadata.PropertyName], 4);
+            if (propMetadata.dataType === "Decimal") {
+                formatter = ko.metadata.createDecimalFormatter(viewmodel[propMetadata.propertyName], 4);
             }
-            if (propMetadata.DataType === "Date" || propMetadata.DataType === "DateTime") {
-                formatter = ko.metadata.createDateFormatter(viewmodel, viewmodel[propMetadata.PropertyName]);
+            if (propMetadata.dataType === "Date" || propMetadata.DataType === "DateTime") {
+                formatter = ko.metadata.createDateFormatter(viewmodel, viewmodel[propMetadata.propertyName]);
             }
             return formatter;
         };
@@ -803,7 +806,7 @@
         var modelMetaData = viewModel._metadataContainer.data;
 
         target.fieldName = metadataValidationOptions.fieldName;
-        target.displayName = propertyMetadata.DisplayName;
+        target.displayName = propertyMetadata.displayName;
 
         target.validationMessages = ko.observableArray();
 

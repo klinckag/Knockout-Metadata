@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Web;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace Sample.Web.Mvc.Gui.Core.Extensions
 {
@@ -13,7 +14,7 @@ namespace Sample.Web.Mvc.Gui.Core.Extensions
         {
             JsonSerializer js = JsonSerializer.Create(new JsonSerializerSettings()
             {
-                //ContractResolver = new CamelCasePropertyNamesContractResolver()
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
             });
             var jw = new StringWriter();
             js.Serialize(jw, obj);
