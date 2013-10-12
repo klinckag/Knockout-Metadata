@@ -193,18 +193,24 @@
             }
             for (i = 0; i < metadata.validationRules.length; i++) {
                 var rule = metadata.validationRules[i];
-                var extender, extenderParams;
-                if (rule.Name === "length" && rule.params.max) {
-                    extenderParams = { params: rule.params.max }
-                    extender = { validateMaxLength: extenderParams }
+                var extender = null;
+                var extenderParams = null;
+                if (rule.name === "length" && rule.params.max) {
+                    extenderParams = { params: rule.params.max };
+                    extender = { validateMaxLength: extenderParams };
                 }
-                if (rule.Name === "length" && rule.params.min) {
-                    observable.extend({ validateMinLength: rule.params.min });
+                if (rule.name === "length" && rule.params.min) {
+                    extenderParams = { params: rule.params.min };
+                    extender = { validateMinLength: extenderParams };
                 }
-                if (rule.Name === "required") {
+                if (rule.name === "range") {
+                    extenderParams = { params: { min: rule.params.min, max: rule.params.max } };
+                    extender = { range: extenderParams };
+                }
+                if (rule.name === "required") {
                     viewmodel._validationContainer.requiredFields.push(fieldName);
                 }
-                if (extender) {
+                if (extender !== null) {
                     if (configuration.useMetadataErrorMessage && rule.errorMessage && rule.errorMessage !== '') {
                         extenderParams.message = rule.errorMessage;
                     }
@@ -251,7 +257,7 @@
                             }
                         }
                     }
-                    if (parsedValue) {
+                    if (parsedValue !== undefined && parsedValue !== null) {
                         valueToWrite = parsedValue;
                     }
                     if (valueToWrite === "") {
@@ -261,7 +267,7 @@
                     if (valueToWrite !== current) {
                         observable(valueToWrite);
                     }
-                    if (formattedCurrent !== newValue) {
+                    if (formattedCurrent !== valueToWrite) {
                         observable.notifySubscribers(valueToWrite);
                     }
                 }
@@ -726,7 +732,7 @@
         validator: function (value, mustBeInt32) {
             var result = true;
             if (value !== undefined && value !== null) {
-                if (typeof value !== 'number') {
+                if (typeof value !== 'number' && value !== 0) {
                     result = false;
                 }
                 else {
@@ -807,12 +813,23 @@
         // The actual validation logic
         validator: function (value, params) {
             var result = true;
-            if (params.requiredFields.indexOf(params.fieldName) >= 0 && (value === undefined || value == null || value == "")) {
+            if (params.requiredFields.indexOf(params.fieldName) >= 0 && (value === undefined || value === null || value === "")) {
                 result = false;
             }
             return result;
         },
         message: "{0} is required."
+    };
+    metadata.validationRules['range'] = {
+        validator: function (value, options) {
+            var result = true;
+            if (value !== undefined) {
+                result = value >= options.min && value <= options.max;
+            }
+
+            return result;
+        },
+        message: "{0} must be between x and y"
     };
     //now register all of these!
     (function () {

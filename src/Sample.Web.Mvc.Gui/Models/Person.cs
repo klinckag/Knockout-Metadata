@@ -11,6 +11,9 @@ namespace Sample.Web.Mvc.Gui.Models
 
         }
 
+        [Range(0, 100)]
+        public int SomeRange { get; set; }
+
         [Required]
         [StringLength(50)]
         [Display(Name = "Voornaam")]
