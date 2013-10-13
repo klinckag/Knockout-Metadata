@@ -145,27 +145,21 @@
 
     //#region API:..
     var api = (function () {
-        formatMessage = function (message, fieldname, params) {
+        formatMessage = function (message, fieldname, rule, params) {
             if (typeof (message) === 'function') {
                 return message(params);
             }
             var m = message.replace(/\{0\}/gi, fieldname);
 
             var a = [];
-            for (name in params) {
-                if(params.hasOwnProperty(name)) {
-                    a.push(params[name]);
-                }
-            }
-            if (a.length == 0) {
-                a.push(params);
+            if (typeof (rule.messageArguments) === 'function') {
+                a = rule.messageArguments(params)
             }
 
             m = m.replace(/{(\d+)}/g, function(match, number) { 
                 return typeof a[number - 1] != 'undefined' ? a[number - 1] : match;
             });
-            //TODO -- this is not correct
-            //m = m.replace(/\{1\}/gi, params);
+
             return m;
         };
 
@@ -510,7 +504,7 @@
             //Execute the validator and see if its valid 
             if (!rule.validator(observable(), params)) {
                 //not valid, so format the error message and stick it in the 'error' variable
-                var message = ko.metadata.formatMessage(ctx.message || rule.message, observable.displayName, ctx.params);
+                var message = ko.metadata.formatMessage(ctx.message || rule.message, observable.displayName, rule, ctx.params);
                 observable.validationMessages.push(message);
                 return false;
             } else {
@@ -720,7 +714,12 @@
                 return val.length <= maxLength;
             }
         },
-        message: 'Please enter no more than {1} characters for {0}.'
+        message: 'Please enter no more than {1} characters for {0}.',
+        messageArguments: function (options) {
+            var args = [];
+            args.push(options);
+            return args;
+        }
     };
     metadata.validationRules.validateMinLength = {
         validator: function (val, minLength) {
@@ -731,7 +730,12 @@
                 return val.length >= minLength;
             }
         },
-        message: 'Please enter at least {1} characters for {0}.'
+        message: 'Please enter at least {1} characters for {0}.',
+        messageArguments: function (options) {
+        var args = [];
+        args.push(options);
+        return args;
+    }
     };
     //EMail validation
     metadata.validationRules.validateEmail = {
@@ -847,7 +851,13 @@
 
             return result;
         },
-        message: "{0} must be between {1} and {2}"
+        message: "{0} must be between {1} and {2}",
+        messageArguments: function (options) {
+            var args = [];
+            args.push(options.min);
+            args.push(options.max);
+            return args;
+        }
     };
     //now register all of these!
     (function () {
@@ -949,10 +959,6 @@
             //add or remove class on the element;
             ko.bindingHandlers.css.update(element, cssSettingsAccessor);
             if (!config.errorsAsTitle) { return; }
-
-            var origTitle = utils.getAttribute(element, 'data-orig-title'),
-                elementTitle = element.title,
-                titleIsErrorMsg = utils.getAttribute(element, 'data-orig-title') === "true";
 
             var errorMsgTitleAccessor = function () {
                 if (!isValid) {
