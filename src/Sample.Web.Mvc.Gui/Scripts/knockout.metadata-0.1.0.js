@@ -270,7 +270,7 @@
                             }
                         }
                     }
-                    if (parsedValue !== undefined && parsedValue !== null) {
+                    if (parsedValue !== undefined && parsedValue !== null && isNaN(parsedValue) === false ) {
                         valueToWrite = parsedValue;
                     }
                     if (valueToWrite === "") {
@@ -470,7 +470,7 @@
             return formatter;
         };
 
-        validateObservable = function (observable, modelValidationContainer) {
+        validateObservable = function (observable) {
             var i = 0,
                 rule, // the rule validator to execute
                 ctx, // the current Rule Context for the loop
@@ -484,8 +484,9 @@
                 ctx = ruleContexts[i];
 
                 // checks an 'onlyIf' condition
-                if (ctx.condition && !ctx.condition())
+                if (ctx.condition && !ctx.condition()) {
                     continue;
+                }
 
                 //get the core Rule to use for validation
                 rule = exports.validationRules[ctx.rule];
@@ -496,7 +497,7 @@
 
                 } else {
                     //run normal sync validation
-                    if (!validateSync(observable, modelValidationContainer, rule, ctx)) {
+                    if (!validateSync(observable, rule, ctx)) {
                         //return false; //break out of the loop
                     }
                 }
@@ -504,7 +505,7 @@
             return true;
         };
 
-        validateSync = function (observable, modelValidationContainer, rule, ctx) {
+        validateSync = function (observable, rule, ctx) {
             //default params is true, eg. required = true
             var params = ctx.params === undefined ? true : ctx.params;
             //Execute the validator and see if its valid 
@@ -909,7 +910,7 @@
 
         // check the observable against all attached validators
         target.validate = function () {
-            ko.metadata.validateObservable(target, modelValidationContainer);
+            ko.metadata.validateObservable(target);
         };
 
         // validate when it changes
