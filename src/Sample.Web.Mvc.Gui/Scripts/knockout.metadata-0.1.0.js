@@ -33,10 +33,13 @@
     ko.metadata = metadata;
 
     var defaults = {
-        //useMetadataErrorMessage: true => uses the ErrorMessage specified by the metaData, false => uses the ErrorMessage specified by knockout.metadata
+        //useMetadataErrorMessage: true => uses the ErrorMessage specified by the metaData, false => uses the ErrorMessage specified by knockout.metadata.
         useMetadataErrorMessage: true,
+        //decorateElement: true => adds the css class specified by 'errorElementClass' to the element when invalid.
         decorateElement: true,
+        //errorsAsTitle: true => sets the title of the element to the validationmessage when invalid.
         errorsAsTitle: true,
+        //errorElementClass: the css class for marking invalid elements 
         errorElementClass: 'input-validation-error'
     };
 
@@ -105,6 +108,7 @@
             ViewModelBase: ViewModelBase
         };
     }());
+
     // Expose
     ko.utils.extend(metadata, vmb);
     //#endregion ViewModelBase:..
@@ -396,6 +400,8 @@
             mapToViewModelByMetadataInternal(data, viewmodel, metadata);
         };
 
+        //using the metadata to build up the viewmodel from scratch
+
         mapToViewModelByMetadataInternal = function (data, viewmodel, metadata) {
             //Loop metadata for all the Properties of the entity
             for (var i = 0; i < metadata.properties.length; i++) {
@@ -520,8 +526,8 @@
         //      });
         //
         addRule = function (observable, rule) {
-            //TODO extender not yet available
-            observable.extend({ validatable: true });
+            //TODO this is done in another way
+            //observable.extend({ validatable: true });
 
             //push a Rule Context to the observables local array of Rule Contexts
             observable.validationRules.push(rule);
@@ -933,7 +939,7 @@
         update: function (element, valueAccessor) {
             var observable = valueAccessor();
             //if we are binding to a 'formatted' observable, we need to work with the actual observable
-            if(observable.unFormattedObservable) {
+            if (observable.unFormattedObservable !== undefined && ko.isComputed(observable.unFormattedObservable) ) {
                 observable = observable.unFormattedObservable();
             }
             //config = ko.validation.utils.getConfigOptions(element),
@@ -958,6 +964,7 @@
 
             //add or remove class on the element;
             ko.bindingHandlers.css.update(element, cssSettingsAccessor);
+
             if (!config.errorsAsTitle) { return; }
 
             var errorMsgTitleAccessor = function () {

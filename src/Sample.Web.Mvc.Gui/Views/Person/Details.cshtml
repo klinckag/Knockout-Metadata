@@ -70,6 +70,7 @@
             var decimalseparator = Globalize.culture().numberFormat["."];
 
             ko.metadata.configuration.useMetadataErrorMessage = false;
+            ko.metadata.configuration.errorsAsTitle = false;
 
             $.getJSON("/api/Person/121").success(function(data){
                 var personVm = new app.person.Person(metadata);
