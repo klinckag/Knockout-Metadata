@@ -150,8 +150,22 @@
                 return message(params);
             }
             var m = message.replace(/\{0\}/gi, fieldname);
+
+            var a = [];
+            for (name in params) {
+                if(params.hasOwnProperty(name)) {
+                    a.push(params[name]);
+                }
+            }
+            if (a.length == 0) {
+                a.push(params);
+            }
+
+            m = m.replace(/{(\d+)}/g, function(match, number) { 
+                return typeof a[number - 1] != 'undefined' ? a[number - 1] : match;
+            });
             //TODO -- this is not correct
-            m = m.replace(/\{1\}/gi, params);
+            //m = m.replace(/\{1\}/gi, params);
             return m;
         };
 
@@ -833,7 +847,7 @@
 
             return result;
         },
-        message: "{0} must be between x and y"
+        message: "{0} must be between {1} and {2}"
     };
     //now register all of these!
     (function () {
