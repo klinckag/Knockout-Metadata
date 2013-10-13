@@ -9,6 +9,7 @@ namespace Sample.Web.Mvc.Gui.Models
 
         }
 
+        [Required]
         public string Name { get; set; }
 
         [Range(1, 10)]

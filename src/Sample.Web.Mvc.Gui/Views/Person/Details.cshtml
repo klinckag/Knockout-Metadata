@@ -46,7 +46,7 @@
 <!-- ko foreach: $data.Skills -->
 <div>
     <div data-bind="labelBinding: $data.Name"></div>
-    <input type="text" data-bind="value: $data.Name" /><div data-bind="errorBinding: $data.Name"></div>
+    <input type="text" data-bind="dataValue: $data.Name" /><div data-bind="errorBinding: $data.Name"></div>
 </div>
 <!-- /ko -->
 
@@ -69,7 +69,7 @@
 
             var decimalseparator = Globalize.culture().numberFormat["."];
 
-            ko.metadata.configuration.useMetadataErrorMessage = true;
+            ko.metadata.configuration.useMetadataErrorMessage = false;
 
             $.getJSON("/api/Person/121").success(function(data){
                 var personVm = new app.person.Person(metadata);

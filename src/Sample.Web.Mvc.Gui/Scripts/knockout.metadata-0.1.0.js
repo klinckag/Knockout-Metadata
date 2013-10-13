@@ -38,7 +38,7 @@
         decorateElement: true,
         errorsAsTitle: true,
         errorElementClass: 'input-validation-error'
-    }
+    };
 
     var configuration = ko.utils.extend({}, defaults);
     ko.metadata.configuration = configuration;
@@ -103,7 +103,7 @@
 
         return {
             ViewModelBase: ViewModelBase
-        }
+        };
     }());
     // Expose
     ko.utils.extend(metadata, vmb);
@@ -140,7 +140,7 @@
                 return hasSavedOriginalTitle ?
                     savedOriginalTitle : currentTitle;
             }
-        }
+        };
     }());
 
     //#region API:..
@@ -150,6 +150,7 @@
                 return message(params);
             }
             var m = message.replace(/\{0\}/gi, fieldname);
+            //TODO -- this is not correct
             m = m.replace(/\{1\}/gi, params);
             return m;
         };
@@ -162,7 +163,7 @@
             var metadataValidationOptions = {
                 viewModel: viewmodel,
                 fieldName: fieldName
-            }
+            };
             var observable = ko.observable(initialValue).extend({ metadataValidation: metadataValidationOptions });
 
             //Required fields are added to a collection, so we can easily add or remove required fields.
@@ -223,11 +224,11 @@
 
         createIntegerFormatter = function (observable) {
             return createNumericFormatter(observable, "n0", false);
-        }
+        };
 
         createDecimalFormatter = function (observable, numberOfDecimalPlaces) {
             return createNumericFormatter(observable, "n" + numberOfDecimalPlaces, true);
-        }
+        };
 
         createNumericFormatter = function (observable, format, allowDecimals) {
             //create a writeable computed observable to intercept writes to our observable
@@ -243,7 +244,7 @@
                     var formattedCurrent = Globalize.format(observable(), format);
                     var parsedValue = newValue;
                     var valueToWrite = newValue;
-                    if (newValue != undefined) {
+                    if (newValue !== undefined) {
                         if (typeof newValue !== "number") {
                             if (allowDecimals) {
                                 parsedValue = Globalize.parseFloat(newValue);
@@ -251,7 +252,7 @@
                             else {
                                 parsedValue = Globalize.parseInt(newValue);
                                 var parsedFloat = Globalize.parseFloat(newValue);
-                                if (parsedValue != parsedFloat) {
+                                if (parsedValue !== parsedFloat) {
                                     parsedValue = null;
                                 }
                             }
@@ -271,7 +272,7 @@
                         observable.notifySubscribers(valueToWrite);
                     }
                 }
-            })
+            });
 
             result.unFormattedObservable =  ko.computed(function () {
                 return observable;
@@ -295,14 +296,14 @@
                     formats = [0];
                     formats[0] = shortDateFormat;
 
-                    format = formats[0]
+                    format = formats[0];
                 }
                 if (propMetadata.dataType === "DateTime") {
                     formats = [1];
                     formats[0] = shortDateFormat + " " + shortTimeFormat;
                     formats[1] = shortDateFormat + " " + longTimeFormat;
 
-                    format = formats[0]
+                    format = formats[0];
                 }
             }
 
@@ -318,7 +319,7 @@
                     var formattedCurrent = Globalize.format(observable(), format);
                     var parsedValue = newValue;
                     var valueToWrite = newValue;
-                    if (newValue != undefined) {
+                    if (newValue !== undefined) {
                         if (!(newValue instanceof Date)) {
                             parsedValue = Globalize.parseDate(newValue, formats);
                         }
@@ -336,7 +337,7 @@
                         observable.notifySubscribers(valueToWrite);
                     }
                 }
-            })
+            });
 
             result.unFormattedObservable = ko.computed(function () {
                 return observable;
@@ -367,7 +368,7 @@
                 format = format.charAt(1);
             }
             return format;
-        }
+        };
 
         getMetadata = function (metadata, propertyNames) {
             var propertyNameToGet = propertyNames.shift();
@@ -376,7 +377,7 @@
             });
 
             if (propertyNames.length !== 0) {
-                return getMetadata(match, propertyNames)
+                return getMetadata(match, propertyNames);
             }
 
             return match;
@@ -385,7 +386,7 @@
         mapToViewModelByMetadata = function (data, viewmodel) {
             var metadata = viewmodel._metadataContainer.data;
             mapToViewModelByMetadataInternal(data, viewmodel, metadata);
-        }
+        };
 
         mapToViewModelByMetadataInternal = function (data, viewmodel, metadata) {
             //Loop metadata for all the Properties of the entity
@@ -393,9 +394,10 @@
                 var propMetadata = metadata.properties[i];
                 var dataValue = null;
                 if (data[propMetadata.propertyName] !== undefined) {
-                    dataValue = data[propMetadata.propertyName]
+                    dataValue = data[propMetadata.propertyName];
                 }
                 if (propMetadata.isComplexType) {
+                    var vm;
                     if (propMetadata.isListType) {
                         //ListType
                         //Create the observableArray for our ListType
@@ -404,7 +406,7 @@
                         for (var j = 0; j < dataValue.length; j++) {
                             var listItem = dataValue[j];
                             //Convention => 'create<DataType>' function is used to create an item
-                            var vm = viewmodel._childs["create" + propMetadata.listTypeViewModelMetadata.dataType](propMetadata.listTypeViewModelMetadata);
+                            vm = viewmodel._childs["create" + propMetadata.listTypeViewModelMetadata.dataType](propMetadata.listTypeViewModelMetadata);
                             mapToViewModelByMetadataInternal(listItem, vm, propMetadata.listTypeViewModelMetadata);
                             viewmodel[propMetadata.propertyName].push(vm);
                         }
@@ -412,7 +414,7 @@
                     else {
                         //ComplexType ( but not a list)
                         //Convention => 'create<DataType>' function is used to create an item
-                        var vm = viewmodel._childs["create" + propMetadata.dataType](propMetadata)
+                        vm = viewmodel._childs["create" + propMetadata.dataType](propMetadata);
                         var observableChild = ko.observable(vm);
                         mapToViewModelByMetadataInternal(dataValue, vm, propMetadata);
                         viewmodel[propMetadata.propertyName] = observableChild;
@@ -438,7 +440,7 @@
                     }
                 }
             }
-        }
+        };
 
         createFormatter = function (viewmodel, propMetadata) {
             var formatter = null;
@@ -474,7 +476,7 @@
                 //get the core Rule to use for validation
                 rule = exports.validationRules[ctx.rule];
 
-                if (rule['async'] || ctx['async']) {
+                if (rule.async || ctx.async) {
                     //run async validation
                     validateAsync(observable, rule, ctx);
 
@@ -490,7 +492,7 @@
 
         validateSync = function (observable, modelValidationContainer, rule, ctx) {
             //default params is true, eg. required = true
-            var params = ctx.params === undefined ? true : ctx.params
+            var params = ctx.params === undefined ? true : ctx.params;
             //Execute the validator and see if its valid 
             if (!rule.validator(observable(), params)) {
                 //not valid, so format the error message and stick it in the 'error' variable
@@ -567,49 +569,51 @@
 
         realTypeOf = function (v) {
             //http://joncom.be/code/realtypeof/
-            if (typeof (v) == "object") {
+            if (typeof (v) === "object") {
                 if (v === null) return "null";
-                if (v.constructor == (new Array).constructor) return "array";
-                if (v.constructor == (new Date).constructor) return "date";
-                if (v.constructor == (new RegExp).constructor) return "regex";
+                if (v.constructor === (new Array()).constructor) return "array";
+                if (v.constructor === (new Date()).constructor) return "date";
+                if (v.constructor === (new RegExp()).constructor) return "regex";
                 return "object";
             }
             return typeof (v);
-        }
+        };
 
         formatJSON = function (oData, sIndent) {
             //http://joncom.be/code/javascript-json-formatter/
+            var iCount, sHTML;
+
             if (arguments.length < 2) {
-                var sIndent = "";
+                sIndent = "";
             }
             var sIndentStyle = "&nbsp;&nbsp;&nbsp;&nbsp;";
             var sDataType = realTypeOf(oData);
 
             // open object
-            if (sDataType == "array") {
-                if (oData.length == 0) {
+            if (sDataType === "array") {
+                if (oData.length === 0) {
                     return "[]";
                 }
-                var sHTML = "[";
+                sHTML = "[";
             } else {
-                var iCount = 0;
+                iCount = 0;
                 $.each(oData, function () {
                     iCount++;
                     return;
                 });
-                if (iCount == 0) { // object is empty
+                if (iCount === 0) { // object is empty
                     return "{}";
                 }
-                var sHTML = "{";
+                sHTML = "{";
             }
 
             // loop through items
-            var iCount = 0;
+            iCount = 0;
             $.each(oData, function (sKey, vValue) {
                 if (iCount > 0) {
                     sHTML += ",";
                 }
-                if (sDataType == "array") {
+                if (sDataType === "array") {
                     sHTML += ("<BR/>" + sIndent + sIndentStyle);
                 } else {
                     sHTML += ("<BR/>" + sIndent + sIndentStyle + "\"" + sKey + "\"" + ": ");
@@ -640,7 +644,7 @@
             });
 
             // close object
-            if (sDataType == "array") {
+            if (sDataType === "array") {
                 sHTML += ("<BR/>" + sIndent + "]");
             } else {
                 sHTML += ("<BR/>" + sIndent + "}");
@@ -648,7 +652,7 @@
 
             // return
             return sHTML;
-        }
+        };
 
         return {
             formatMessage: formatMessage,
@@ -670,7 +674,7 @@
 
     //#region validationRules:..
     metadata.validationRules = {};
-    metadata.validationRules["validateRequired"] = {
+    metadata.validationRules.validateRequired = {
         validator: function (val, required) {
             var stringTrimRegEx = /^\s+|\s+$/g,
                 testVal;
@@ -693,7 +697,7 @@
         },
         message: '{0} is required.'
     };
-    metadata.validationRules['validateMaxLength'] = {
+    metadata.validationRules.validateMaxLength = {
         validator: function (val, maxLength) {
             if (val === undefined || val === null || val.length === undefined) {
                 return true;
@@ -704,7 +708,7 @@
         },
         message: 'Please enter no more than {1} characters for {0}.'
     };
-    metadata.validationRules['validateMinLength'] = {
+    metadata.validationRules.validateMinLength = {
         validator: function (val, minLength) {
             if (val === undefined || val === null || val.length === undefined) {
                 return true;
@@ -716,19 +720,19 @@
         message: 'Please enter at least {1} characters for {0}.'
     };
     //EMail validation
-    metadata.validationRules["validateEmail"] = {
+    metadata.validationRules.validateEmail = {
         validator: function (value, validationMessage) {
             var result = true;
-            if (value != undefined && value !== "") {
+            if (value !== undefined && value !== "") {
                 result = /^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))$/i.test(value);
             }
 
             return result;
         },
         message: "Please enter a valid email address for {0}."
-    }
+    };
     //Validates if a number is a whole number.
-    metadata.validationRules["validateNumberIsWhole"] = {
+    metadata.validationRules.validateNumberIsWhole = {
         validator: function (value, mustBeInt32) {
             var result = true;
             if (value !== undefined && value !== null) {
@@ -736,7 +740,7 @@
                     result = false;
                 }
                 else {
-                    if (parseInt(value) !== value) {
+                    if (parseInt(value, 10) !== value) {
                         result = false;
                     }
                 }
@@ -768,7 +772,7 @@
     //    message: "{0} is not a valid number."
     //};
     //Float validation
-    metadata.validationRules["validateNumber"] = {
+    metadata.validationRules.validateNumber = {
         validator: function (value, validationMessage) {
             var result = true;
             if (value !== undefined && value !== null) {
@@ -779,7 +783,7 @@
             return result;
         },
         message: "{0} is not a valid decimal."
-    }
+    };
     //metadata.validationRules["validateFloat"] = {
     //    validator: function (value, validationMessage) {
     //        var floatValue = value,
@@ -797,10 +801,10 @@
     //    message: "{0} is not a valid decimal."
     //}
     //Date validation
-    metadata.validationRules["validateDate"] = {
+    metadata.validationRules.validateDate = {
         validator: function (value, mustBeDate) {
             var dateValue = value;
-            if (value != undefined && value != "" && !(value instanceof Date)) {
+            if (value !== undefined && value !== "" && !(value instanceof Date)) {
                 dateValue = Globalize.parseDate(value, "en");
             }
 
@@ -809,7 +813,7 @@
         message: "{0} is not a valid date."
     };
     //Required validation
-    metadata.validationRules["validateInRequiredFields"] = {
+    metadata.validationRules.validateInRequiredFields = {
         // The actual validation logic
         validator: function (value, params) {
             var result = true;
@@ -820,7 +824,7 @@
         },
         message: "{0} is required."
     };
-    metadata.validationRules['range'] = {
+    metadata.validationRules.range = {
         validator: function (value, options) {
             var result = true;
             if (value !== undefined) {
@@ -899,14 +903,14 @@
             // and again whenever the associated observable changes value.
             // Update the DOM element based on the supplied values here.
         }
-    }
+    };
 
     ko.bindingHandlers.validationElement = {
         update: function (element, valueAccessor) {
             var observable = valueAccessor();
             //if we are binding to a 'formatted' observable, we need to work with the actual observable
             if(observable.unFormattedObservable) {
-                observable = observable.unFormattedObservable()
+                observable = observable.unFormattedObservable();
             }
             //config = ko.validation.utils.getConfigOptions(element),
             var config = ko.metadata.configuration;
@@ -980,5 +984,5 @@
     };
 
     templateEngine.addTemplate("kov_fieldValidationIndicator", "<span class=\"kov_fieldValidationIndicator\" data-bind=\"visible: !data.isValidForUi(), attr: {title: data.validationMessage}\">&nbsp;!&nbsp;</span>");
-    templateEngine.addTemplate("kov_label", "<label data-bind=\"attr: { for: data.fieldName }, text: data.displayName + ' : '\"></label>")
+    templateEngine.addTemplate("kov_label", "<label data-bind=\"attr: { for: data.fieldName }, text: data.displayName + ' : '\"></label>");
 }));
