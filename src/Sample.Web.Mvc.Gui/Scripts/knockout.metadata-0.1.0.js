@@ -160,7 +160,7 @@
                 a = rule.messageArguments(params)
             }
 
-            m = m.replace(/{(\d+)}/g, function(match, number) { 
+            m = m.replace(/{(\d+)}/g, function (match, number) {
                 return typeof a[number - 1] != 'undefined' ? a[number - 1] : match;
             });
 
@@ -252,101 +252,14 @@
                     return formatted;
                 },
                 write: function (newValue) {
-                    var current = observable();
-                    var formattedCurrent = Globalize.format(observable(), format);
-                    var parsedValue = newValue;
-                    var valueToWrite = newValue;
-                    if (newValue !== undefined) {
-                        if (typeof newValue !== "number") {
-                            if (allowDecimals) {
-                                parsedValue = Globalize.parseFloat(newValue);
-                            }
-                            else {
-                                parsedValue = Globalize.parseInt(newValue);
-                                var parsedFloat = Globalize.parseFloat(newValue);
-                                if (parsedValue !== parsedFloat) {
-                                    parsedValue = null;
-                                }
-                            }
-                        }
+                    var currentValue = observable();
+                    var parseResult = parseAndFormatNumeric(currentValue, newValue, format, allowDecimals);
+
+                    if (parseResult.parsedValue !== currentValue) {
+                        observable(parseResult.parsedValue);
                     }
-                    if (parsedValue !== undefined && parsedValue !== null && isNaN(parsedValue) === false ) {
-                        valueToWrite = parsedValue;
-                    }
-                    if (valueToWrite === "") {
-                        valueToWrite = null;
-                    }
-
-                    if (valueToWrite !== current) {
-                        observable(valueToWrite);
-                    }
-                    if (formattedCurrent !== valueToWrite) {
-                        observable.notifySubscribers(valueToWrite);
-                    }
-                }
-            });
-
-            result.unFormattedObservable =  ko.computed(function () {
-                return observable;
-            });
-
-            return result;
-        };
-
-        createDateFormatter = function (viewModel, observable, format) {
-            //create a writeable computed observable to intercept writes to our observable
-            var formats;
-            if (!format) {
-                //We want to support short date short time (d t) and short date long time (d T) and ... to parse datetime input
-                //TODO provide even more valid formats for parsing
-                var propMetadata = viewModel.getMetadata(observable.fieldName);
-                var shortDateFormat = globalizeExpandFormat("d");
-                var shortTimeFormat = globalizeExpandFormat("t");
-                var longTimeFormat = globalizeExpandFormat("T");
-
-                if (propMetadata.dataType === "Date") {
-                    formats = [0];
-                    formats[0] = shortDateFormat;
-
-                    format = formats[0];
-                }
-                if (propMetadata.dataType === "DateTime") {
-                    formats = [1];
-                    formats[0] = shortDateFormat + " " + shortTimeFormat;
-                    formats[1] = shortDateFormat + " " + longTimeFormat;
-
-                    format = formats[0];
-                }
-            }
-
-            format = format || "d";
-
-            var result = ko.computed({
-                read: function () {
-                    var formatted = Globalize.format(observable(), format);
-                    return formatted;
-                },
-                write: function (newValue) {
-                    var current = observable();
-                    var formattedCurrent = Globalize.format(observable(), format);
-                    var parsedValue = newValue;
-                    var valueToWrite = newValue;
-                    if (newValue !== undefined) {
-                        if (!(newValue instanceof Date)) {
-                            parsedValue = Globalize.parseDate(newValue, formats);
-                        }
-                    }
-                    if (parsedValue) {
-                        //compensate timezoneoffset
-                        //parsedValue.setUTCMinutes(parsedValue.getMinutes() - parsedValue.getTimezoneOffset());
-                        valueToWrite = parsedValue;
-                    }
-
-                    if (valueToWrite !== current) {
-                        observable(valueToWrite);
-                    }
-                    if (formattedCurrent !== newValue) {
-                        observable.notifySubscribers(valueToWrite);
+                    if (parseResult.formattedValue !== parseResult.parsedValue) {
+                        observable.notifySubscribers(parseResult.parsedValue);
                     }
                 }
             });
@@ -357,6 +270,103 @@
 
             return result;
         };
+
+        parseAndFormatNumeric = function (currentValue, newValue, format, allowDecimals) {
+            var formattedCurrent = Globalize.format(currentValue, format);
+            var parsedValue = newValue;
+            var valueToWrite = newValue;
+            if (newValue !== undefined) {
+                if (typeof newValue !== "number") {
+                    if (allowDecimals) {
+                        parsedValue = Globalize.parseFloat(newValue);
+                    }
+                    else {
+                        parsedValue = Globalize.parseInt(newValue);
+                        var parsedFloat = Globalize.parseFloat(newValue);
+                        if (parsedValue !== parsedFloat) {
+                            parsedValue = null;
+                        }
+                    }
+                }
+            }
+            if (parsedValue !== undefined && parsedValue !== null && isNaN(parsedValue) === false) {
+                valueToWrite = parsedValue;
+            }
+            if (valueToWrite === "") {
+                valueToWrite = null;
+            }
+
+            return {
+                parsedValue: valueToWrite,
+                formattedValue: formattedCurrent
+            };
+        }
+
+        createDateFormatter = function (observable, format, dataType) {
+            //create a writeable computed observable to intercept writes to our observable
+            var formats;
+            if (format === undefined || format === null) {
+                switch (dataType) {
+                    case "Date":
+                        formats = acceptedDateFormats;
+                        break;
+                    case "DateTime":
+                        formats = acceptedDateTimeformats;
+                        break;
+                    case "Time":
+                        formats = acceptedTimeformats;
+                }
+
+                format = formats[0];
+            }
+
+            format = format || "d";
+
+            var result = ko.computed({
+                read: function () {
+                    var formatted = Globalize.format(observable(), format);
+                    return formatted;
+                },
+                write: function (newValue) {
+                    var currentValue = observable();
+                    var parseResult = parseAndFormatDateTime(currentValue, newValue, format);
+
+                    if (parseResult.parsedValue !== currentValue) {
+                        observable(parseResult.parsedValue);
+                    }
+                    if (parseResult.formattedValue !== parseResult.parsedValue) {
+                        observable.notifySubscribers(parseResult.parsedValue);
+                    }
+                }
+            });
+
+            result.unFormattedObservable = ko.computed(function () {
+                return observable;
+            });
+
+            return result;
+        };
+
+        parseAndFormatDateTime = function (currentValue, newValue, format, acceptedFormats) {
+            var formattedCurrent = Globalize.format(currentValue, format, acceptedFormats);
+            var parsedValue = newValue;
+            var valueToWrite = newValue;
+            if (newValue !== undefined) {
+                if (!(newValue instanceof Date)) {
+                    parsedValue = Globalize.parseDate(newValue, acceptedFormats);
+                }
+            }
+            if (parsedValue) {
+                //compensate timezoneoffset ??
+                //parsedValue.setUTCMinutes(parsedValue.getMinutes() - parsedValue.getTimezoneOffset());
+                valueToWrite = parsedValue;
+            }
+
+            return {
+                parsedValue: valueToWrite,
+                formattedValue: formattedCurrent
+            };
+        }
 
         //expandFormat is not public on Globalize ...
         globalizeExpandFormat = function (format, cultureSelector) {
@@ -443,7 +453,7 @@
                     //And set the value ( with a special case for Dates )
                     if (propMetadata.dataType === "Date" || propMetadata.dataType === "DateTime") {
                         dataValue = Globalize.parseDate(dataValue, "yyyy-MM-ddTHH:mm:ss");
-                        //compensate timezoneoffset
+                        //compensate timezoneoffset ???
                         //value.setUTCMinutes(value.getMinutes() - value.getTimezoneOffset());
                     }
                     viewmodel[propMetadata.propertyName](dataValue);
@@ -458,14 +468,29 @@
 
         createFormatter = function (viewmodel, propMetadata) {
             var formatter = null;
-            if (propMetadata.dataType === "Int32") {
-                formatter = ko.metadata.createIntegerFormatter(viewmodel[propMetadata.propertyName]);
-            }
-            if (propMetadata.dataType === "Decimal") {
-                formatter = ko.metadata.createDecimalFormatter(viewmodel[propMetadata.propertyName], 4);
-            }
-            if (propMetadata.dataType === "Date" || propMetadata.DataType === "DateTime") {
-                formatter = ko.metadata.createDateFormatter(viewmodel, viewmodel[propMetadata.propertyName]);
+            //TODO add other dataTypes ??
+            switch (propMetadata.dataType) {
+                case "Byte":
+                case "SByte":
+                case "Int16":
+                case "UInt16":
+                case "Int32":
+                case "UInt32":
+                case "Int64":
+                case "UInt64":
+                    formatter = ko.metadata.createIntegerFormatter(viewmodel[propMetadata.propertyName]);
+                    break;
+                case "Single":
+                case "Double":
+                case "Decimal":
+                    formatter = ko.metadata.createDecimalFormatter(viewmodel[propMetadata.propertyName], 4);
+                    break;
+                case "Date":
+                case "Time":
+                case "DateTime":
+                    var metadata = viewmodel.getMetadata(propMetadata.propertyName);
+                    formatter = ko.metadata.createDateFormatter(viewmodel[propMetadata.propertyName], null, metadata.dataType);
+                    break;
             }
             return formatter;
         };
@@ -539,21 +564,26 @@
             ko.extenders[ruleName] = function (observable, params) {
                 //params can come in a few flavors
                 // 1. Just the params to be passed to the validator
-                // 2. An object containing the Message to be used and the Params to pass to the validator
-                // 3. A condition when the validation rule to be applied
+                //      var test = ko.observable(3).extend({
+                //                      required: true
+                //                  })
                 //
-                // Example:
-                // var test = ko.observable(3).extend({
-                //      max: {
-                //          message: 'This special field has a Max of {0}',
-                //          params: 2,
-                //          onlyIf: function() {
-                //                      return specialField.IsVisible();
-                //                  }
-                //      }
-                //  )};
+                // 2. An object containing 
+                //              the Params to pass to the validator
+                //              optional, the Message to be used 
+                //              optional, a condition when the validation rule is to be applied 
+                //      var test = ko.observable(3).extend({
+                //              max: {
+                //                  params: 2,
+                //                  message: '{0} has a Max of {1}',
+                //                  onlyIf: function() {
+                //                              return specialField.IsVisible();
+                //                      }
+                //            }
+                //      )};
                 //
-                if (params.message || params.onlyIf) { //if it has a message or condition object, then its an object literal to use
+                //if it has a message or condition object, then its an object literal to use
+                if (params.message || params.onlyIf) { 
                     return addRule(observable, {
                         rule: ruleName,
                         message: params.message,
@@ -563,14 +593,14 @@
                 } else {
                     return addRule(observable, {
                         rule: ruleName,
+                        //still can be an object literal
                         params: params.params || params
                     });
                 }
             };
         };
 
-        // loops through all ko.validation.rules and adds them as extenders to ko.extenders
-        // root extenders optional, use 'validation' extender if would cause conflicts
+        // loops through all ko.metatdata.validationrules and adds them as extenders to ko.extenders
         registerExtenders = function () {
             for (var ruleName in exports.validationRules) {
                 if (exports.validationRules.hasOwnProperty(ruleName)) {
@@ -669,6 +699,23 @@
             return sHTML;
         };
 
+        //We want to support short date short time (d t) and short date long time (d T) and ... to parse datetime input
+        //TODO provide even more valid formats for parsing
+        var shortDateFormat = globalizeExpandFormat("d");
+        var shortTimeFormat = globalizeExpandFormat("t");
+        var longTimeFormat = globalizeExpandFormat("T");
+        //Accepted Date Formats
+        var acceptedDateFormats = [0];
+        acceptedDateFormats[0] = shortDateFormat;
+        //Accepted DateTime Formats
+        var acceptedDateTimeformats = [1];
+        acceptedDateTimeformats[0] = shortDateFormat + " " + shortTimeFormat;
+        acceptedDateTimeformats[1] = shortDateFormat + " " + longTimeFormat;
+        //Accepted Time Formats
+        var acceptedTimeformats = [1];
+        acceptedTimeformats[0] = shortTimeFormat;
+        acceptedTimeformats[1] = longTimeFormat;
+
         return {
             formatMessage: formatMessage,
             registerExtenders: registerExtenders,
@@ -739,10 +786,10 @@
         },
         message: 'Please enter at least {1} characters for {0}.',
         messageArguments: function (options) {
-        var args = [];
-        args.push(options);
-        return args;
-    }
+            var args = [];
+            args.push(options);
+            return args;
+        }
     };
     //EMail validation
     metadata.validationRules.validateEmail = {
@@ -757,6 +804,10 @@
         message: "Please enter a valid email address for {0}."
     };
     //Validates if a number is a whole number.
+    //  We do not try to parse non-number formats, we assume the binding (createIntegerFormatter) has done the parsing to the number type.
+    //  The string value '123' will not validate as a whole number.
+    //      This is OK. Behind the scenes we are working with ko.observables, so if we want to do calculations on those (fi ko.computed), 
+    //      we want them to be of type number.
     metadata.validationRules.validateNumberIsWhole = {
         validator: function (value, mustBeInt32) {
             var result = true;
@@ -940,7 +991,7 @@
         update: function (element, valueAccessor) {
             var observable = valueAccessor();
             //if we are binding to a 'formatted' observable, we need to work with the actual observable
-            if (observable.unFormattedObservable !== undefined && ko.isComputed(observable.unFormattedObservable) ) {
+            if (observable.unFormattedObservable !== undefined && ko.isComputed(observable.unFormattedObservable)) {
                 observable = observable.unFormattedObservable();
             }
             //config = ko.validation.utils.getConfigOptions(element),
