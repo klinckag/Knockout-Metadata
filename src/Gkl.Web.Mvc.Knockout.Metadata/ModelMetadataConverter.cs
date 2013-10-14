@@ -30,6 +30,11 @@ namespace Gkl.Web.Mvc.Knockout.Metadata
                 IsComplexType = _modelMetadata.IsComplexType
             };
 
+            foreach (var key in _modelMetadata.AdditionalValues.Keys)
+            {
+                _viewModelMetadata.AdditionalMetadata.Add(key, _modelMetadata.AdditionalValues[key]);
+            }
+
             this.AddValidators();
 
             if (_modelMetadata.IsComplexType)

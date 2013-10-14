@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web.Mvc;
 
 namespace Gkl.Web.Mvc.Knockout.Metadata
@@ -27,6 +24,7 @@ namespace Gkl.Web.Mvc.Knockout.Metadata
         {
             this.Properties = new List<ViewModelMetadata>();
             this.ValidationRules = new List<ViewModelValidationRule>();
+            this.AdditionalMetadata = new Dictionary<string, object>();
         }
 
         public string PropertyName { get; set; }
@@ -40,6 +38,8 @@ namespace Gkl.Web.Mvc.Knockout.Metadata
         public bool IsComplexType { get; set; }
 
         public bool IsListType { get; set; }
+
+        public Dictionary<string, object> AdditionalMetadata { get; private set; }
 
         public ViewModelMetadata ListTypeViewModelMetadata { get; set; }
 

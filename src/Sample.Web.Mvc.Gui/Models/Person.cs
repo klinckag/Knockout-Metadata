@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Web.Mvc;
 
 namespace Sample.Web.Mvc.Gui.Models
 {
@@ -36,6 +37,7 @@ namespace Sample.Web.Mvc.Gui.Models
         //public Int64? SomeInt64 { get; set; }
 
         [Required]
+        [AdditionalMetadata("scale", 0)]
         public decimal? SomeDecimal { get; set; }
 
         [DataType(DataType.Date)]

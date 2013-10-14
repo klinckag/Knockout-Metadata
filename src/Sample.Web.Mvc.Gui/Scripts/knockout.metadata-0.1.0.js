@@ -471,7 +471,13 @@
                 case "Single":
                 case "Double":
                 case "Decimal":
-                    formatter = ko.metadata.createDecimalFormatter(viewmodel[propMetadata.propertyName], 4);
+                    var scale = 4;
+                    if (propMetadata.additionalMetadata) {
+                        if (propMetadata.additionalMetadata.scale || propMetadata.additionalMetadata.scale === 0) {
+                            scale = propMetadata.additionalMetadata.scale;
+                        }
+                    }
+                    formatter = ko.metadata.createDecimalFormatter(viewmodel[propMetadata.propertyName], scale);
                     break;
                 case "Date":
                 case "Time":
