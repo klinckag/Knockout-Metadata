@@ -271,6 +271,39 @@
             return result;
         };
 
+        createDateFormatter = function (observable, acceptedFormats, format) {
+            //create a writeable computed observable to intercept writes to our observable
+            if (format === undefined || format === null) {
+                format = acceptedFormats[0];
+            }
+
+            format = format || "d";
+
+            var result = ko.computed({
+                read: function () {
+                    var formatted = Globalize.format(observable(), format);
+                    return formatted;
+                },
+                write: function (newValue) {
+                    var currentValue = observable();
+                    var parseResult = parseAndFormatDateTime(currentValue, newValue, format);
+
+                    if (parseResult.parsedValue !== currentValue) {
+                        observable(parseResult.parsedValue);
+                    }
+                    if (parseResult.formattedValue !== parseResult.parsedValue) {
+                        observable.notifySubscribers(parseResult.parsedValue);
+                    }
+                }
+            });
+
+            result.unFormattedObservable = ko.computed(function () {
+                return observable;
+            });
+
+            return result;
+        };
+
         parseAndFormatNumeric = function (currentValue, newValue, format, allowDecimals) {
             var formattedCurrent = Globalize.format(currentValue, format);
             var parsedValue = newValue;
@@ -302,53 +335,8 @@
             };
         }
 
-        createDateFormatter = function (observable, format, dataType) {
-            //create a writeable computed observable to intercept writes to our observable
-            var formats;
-            if (format === undefined || format === null) {
-                switch (dataType) {
-                    case "Date":
-                        formats = acceptedDateFormats;
-                        break;
-                    case "DateTime":
-                        formats = acceptedDateTimeformats;
-                        break;
-                    case "Time":
-                        formats = acceptedTimeformats;
-                }
-
-                format = formats[0];
-            }
-
-            format = format || "d";
-
-            var result = ko.computed({
-                read: function () {
-                    var formatted = Globalize.format(observable(), format);
-                    return formatted;
-                },
-                write: function (newValue) {
-                    var currentValue = observable();
-                    var parseResult = parseAndFormatDateTime(currentValue, newValue, format);
-
-                    if (parseResult.parsedValue !== currentValue) {
-                        observable(parseResult.parsedValue);
-                    }
-                    if (parseResult.formattedValue !== parseResult.parsedValue) {
-                        observable.notifySubscribers(parseResult.parsedValue);
-                    }
-                }
-            });
-
-            result.unFormattedObservable = ko.computed(function () {
-                return observable;
-            });
-
-            return result;
-        };
-
         parseAndFormatDateTime = function (currentValue, newValue, format, acceptedFormats) {
-            var formattedCurrent = Globalize.format(currentValue, format, acceptedFormats);
+            var formattedCurrent = Globalize.format(currentValue, format);
             var parsedValue = newValue;
             var valueToWrite = newValue;
             if (newValue !== undefined) {
@@ -488,8 +476,20 @@
                 case "Date":
                 case "Time":
                 case "DateTime":
-                    var metadata = viewmodel.getMetadata(propMetadata.propertyName);
-                    formatter = ko.metadata.createDateFormatter(viewmodel[propMetadata.propertyName], null, metadata.dataType);
+                    var dataType = propMetadata.dataType;
+                    var acceptedFormats;
+                    switch (dataType) {
+                        case "Date":
+                            acceptedFormats = acceptedDateFormats;
+                            break;
+                        case "DateTime":
+                            acceptedFormats = acceptedDateTimeformats;
+                            break;
+                        case "Time":
+                            acceptedFormats = acceptedTimeformats;
+                    };
+
+                    formatter = ko.metadata.createDateFormatter(viewmodel[propMetadata.propertyName], acceptedFormats, null);
                     break;
             }
             return formatter;
@@ -583,7 +583,7 @@
                 //      )};
                 //
                 //if it has a message or condition object, then its an object literal to use
-                if (params.message || params.onlyIf) { 
+                if (params.message || params.onlyIf) {
                     return addRule(observable, {
                         rule: ruleName,
                         message: params.message,
