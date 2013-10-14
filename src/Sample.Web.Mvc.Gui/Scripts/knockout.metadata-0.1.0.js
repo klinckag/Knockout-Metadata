@@ -188,11 +188,18 @@
             var metadata = viewmodel.getMetadata(fieldName);
             if (metadata && metadata.dataType) {
                 switch (metadata.dataType) {
+                    case "Byte":
+                    case "SByte":
                     case "Int16":
+                    case "UInt16":
                     case "Int32":
+                    case "UInt32":
                     case "Int64":
+                    case "UInt64":
                         observable.extend({ validateNumberIsWhole: true });
                         break;
+                    case "Single":
+                    case "Double":
                     case "Decimal":
                         observable.extend({ validateNumber: true });
                         break;
@@ -817,43 +824,19 @@
     metadata.validationRules.validateNumberIsWhole = {
         validator: function (value, mustBeInt32) {
             var result = true;
-            if (value !== undefined && value !== null) {
-                if (typeof value !== 'number' && value !== 0) {
+            if (typeof value !== 'number') {
+                result = false;
+            }
+            else {
+                if (Math[value < 0 ? 'ceil' : 'floor'](value) !== value ) {
                     result = false;
-                }
-                else {
-                    if (parseInt(value, 10) !== value) {
-                        result = false;
-                    }
                 }
             }
             return result;
         },
         message: "{0} is not a valid number."
     };
-    //Validates if a number is a whole number.
-    //metadata.validationRules["validateNumberIsWhole"] = {
-    //    validator: function (value, mustBeInt32) {
-    //        var intValue = value;
-    //        var floatValue = value;
-    //        var result = true;
-    //        if (value != undefined && typeof value !== 'number') {
-    //            intValue = Globalize.parseInt(value, 10, "en");
-    //            floatValue = Globalize.parseFloat(value, 10, "en");
-
-    //            result = false;
-    //            if (intValue && floatValue) {
-    //                if (intValue === floatValue) {
-    //                    result = true;
-    //                }
-    //            }
-    //        }
-
-    //        return result;
-    //    },
-    //    message: "{0} is not a valid number."
-    //};
-    //Float validation
+    //Number validation
     metadata.validationRules.validateNumber = {
         validator: function (value, validationMessage) {
             var result = true;
@@ -866,25 +849,10 @@
         },
         message: "{0} is not a valid decimal."
     };
-    //metadata.validationRules["validateFloat"] = {
-    //    validator: function (value, validationMessage) {
-    //        var floatValue = value,
-    //            result = true;
-    //        if (value != undefined && value !== "" && typeof value !== "number") {
-    //            floatValue = Globalize.parseFloat(value, 10, "en");
-
-    //            if (!floatValue) {
-    //                result = false;
-    //            }
-    //        }
-
-    //        return result;
-    //    },
-    //    message: "{0} is not a valid decimal."
-    //}
     //Date validation
     metadata.validationRules.validateDate = {
         validator: function (value, mustBeDate) {
+            //TODO review this
             var dateValue = value;
             if (value !== undefined && value !== "" && !(value instanceof Date)) {
                 dateValue = Globalize.parseDate(value, "en");

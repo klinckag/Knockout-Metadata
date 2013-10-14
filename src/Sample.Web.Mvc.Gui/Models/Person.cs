@@ -37,7 +37,7 @@ namespace Sample.Web.Mvc.Gui.Models
         //public Int64? SomeInt64 { get; set; }
 
         [Required]
-        [AdditionalMetadata("scale", 0)]
+        [AdditionalMetadata("scale", 2)]
         public decimal? SomeDecimal { get; set; }
 
         [DataType(DataType.Date)]
