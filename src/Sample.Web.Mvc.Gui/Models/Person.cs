@@ -22,7 +22,7 @@ namespace Sample.Web.Mvc.Gui.Models
 
         [Required]
         [StringLength(50, MinimumLength = 10)]
-        [Display(Name = "Famillienaam")]
+        [Display(Name = "Familienaam")]
         public string LastName { get; set; }
 
         [Required]

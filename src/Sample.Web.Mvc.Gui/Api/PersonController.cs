@@ -20,7 +20,7 @@ namespace Sample.Web.Mvc.Gui.Api
             {
                 FirstName = "Geert",
                 LastName = "",
-                EMail = "Bla.net",
+                EMail = "ikke@Bla.net",
                 BirthDate = new DateTime(2010, 1, 1),
                 SomeDecimal = (decimal)10.5,
                 SomeInt = 66,
