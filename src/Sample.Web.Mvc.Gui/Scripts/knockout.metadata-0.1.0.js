@@ -329,6 +329,12 @@
                     }
                 }
             }
+
+            //check for overflow.
+            if (!sanityCheckNumber(newValue, parsedValue, format)) {
+                parsedValue = null;
+            }
+
             if (parsedValue !== undefined && parsedValue !== null && isNaN(parsedValue) === false) {
                 valueToWrite = parsedValue;
             }
@@ -357,10 +363,45 @@
                 valueToWrite = parsedValue;
             }
 
+            //check for overflow.
+            if (!sanityCheckNumber(newValue, parsedValue, format)) {
+                parsedValue = null;
+            }
+
             return {
                 parsedValue: valueToWrite,
                 formattedValue: formattedCurrent
             };
+        }
+
+        sanityCheckNumber = function (newValue, parsedValue, format) {
+            //sanity check to make sure we are not entering numbers > the max or < the min
+            //is it really that complicated ? or am I missing somthing here ... ????
+
+            //find culture specific formattting stuff
+            var culture = Globalize.findClosestCulture();
+            var decSep = culture.numberFormat['.'];
+            var negSymbol = culture.numberFormat['-'];
+            //keep everything which is a decimal number, the decimal separator or the negative symbol
+            var regEx = new RegExp('[^\\d' + decSep + negSymbol + ']', 'g');
+            var newValueStripped = (newValue + '').replace(regEx, '');
+            //format with 100 decimals ( default is n2, so 0.0001 becomes 0.00 so we would get a negative check)
+            var parsedFormatted = Globalize.format(parsedValue, 'n100');
+            var parsedValueStripped = (parsedFormatted + '').replace(regEx, '');
+
+            //Split on the decimal seperator
+            var parts = parsedValueStripped.split(decSep);
+            if (parts.length > 1) {
+                //remove trailing zeros
+                parts[parts.length - 1] = parts[parts.length - 1].replace(/0*$/, '');
+                //put everything back together
+                parsedValueStripped = parts.join(decSep);
+                //remove trailing zeros
+                var re = new RegExp(decSep + '*$');
+                parsedValueStripped = parsedValueStripped.replace(re, '');
+            }
+
+            return (newValueStripped === parsedValueStripped);
         }
 
         //expandFormat is not public on Globalize ...
@@ -837,6 +878,8 @@
         message: "{0} is not a valid number."
     };
     //Number validation
+    //  We do not try to parse non-number formats, we assume the binding (createIntegerFormatter) has done the parsing to the number type.
+    //      See remark for validateNumberIsWhole
     metadata.validationRules.validateNumber = {
         validator: function (value, validationMessage) {
             var result = true;
