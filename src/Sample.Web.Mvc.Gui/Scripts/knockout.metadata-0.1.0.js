@@ -380,7 +380,17 @@
             //parsedValue is the number value from our Globalize parsing
             //format is the format we are using with Globalize
             //
+            // Following approach should work for many cultures
+            // - culture = nl-BE
+            // - input is : '-  0  , 32'
             // - strip everything wich is not a decimal number, the decimal separator and the negative symbol
+            //      => '-0,32'
+            // - replace the culture specific decimal separator by the .
+            //      => '-0.32'
+            // - use parseFloat to convert to number
+            //      => 0.32
+            // - convert it back to string and replace the native decimal separator by the culture specific one
+            //      => '-0,32'
 
             //find culture specific formattting stuff
             var culture = Globalize.findClosestCulture();
@@ -398,36 +408,6 @@
             
             return (newValueStripped == parsedNewValue);
         }
-
-        //sanityCheckNumber = function (newValue, parsedValue, format) {
-        //    //sanity check to make sure we are not entering numbers > the max or < the min
-        //    //is it really that complicated ? or am I missing somthing here ... ????
-
-        //    //find culture specific formattting stuff
-        //    var culture = Globalize.findClosestCulture();
-        //    var decSep = culture.numberFormat['.'];
-        //    var negSymbol = culture.numberFormat['-'];
-        //    //keep everything which is a decimal number, the decimal separator or the negative symbol
-        //    var regEx = new RegExp('[^\\d' + decSep + negSymbol + ']', 'g');
-        //    var newValueStripped = (newValue + '').replace(regEx, '');
-        //    //format with 100 decimals ( default is n2, so 0.0001 becomes 0.00 so we would get a negative check)
-        //    var parsedFormatted = Globalize.format(parsedValue, format);
-        //    var parsedValueStripped = (parsedFormatted + '').replace(regEx, '');
-
-        //    //Split on the decimal seperator
-        //    var parts = parsedValueStripped.split(decSep);
-        //    if (parts.length > 1) {
-        //        //remove trailing zeros
-        //        parts[parts.length - 1] = parts[parts.length - 1].replace(/0*$/, '');
-        //        //put everything back together
-        //        parsedValueStripped = parts.join(decSep);
-        //        //remove trailing zeros
-        //        var re = new RegExp(decSep + '*$');
-        //        parsedValueStripped = parsedValueStripped.replace(re, '');
-        //    }
-
-        //    return (newValueStripped === parsedValueStripped);
-        //}
 
         //expandFormat is not public on Globalize ...
         globalizeExpandFormat = function (format, cultureSelector) {
