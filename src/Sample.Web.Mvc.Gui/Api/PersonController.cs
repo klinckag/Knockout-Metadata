@@ -21,7 +21,8 @@ namespace Sample.Web.Mvc.Gui.Api
                 FirstName = "Geert",
                 LastName = "",
                 EMail = "ikke@Bla.net",
-                BirthDate = new DateTime(2010, 1, 1),
+                BirthDate = new DateTime(2010, 1, 1, 0, 0 ,0, DateTimeKind.Local),
+                //BirthDate = new DateTime(2010, 1, 1),
                 SomeDecimal = (decimal)10.5,
                 SomeInt = 66,
                 Address = new Address()

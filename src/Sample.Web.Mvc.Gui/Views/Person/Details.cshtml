@@ -23,6 +23,12 @@
 <div data-bind="labelBinding: EMail">EMail</div>
 <input id="EMail" type="text" data-bind="dataValue: EMail" /><div data-bind="errorBinding: EMail"></div>
 <br />
+<div data-bind="labelBinding: Password">SomeInt</div>
+<input id="Password" type="text" data-bind="dataValue: Password" /><div data-bind="errorBinding: Password"></div>
+<br />
+<div data-bind="labelBinding: PasswordVerify">SomeInt</div>
+<input id="PasswordVerify" type="text" data-bind="dataValue: PasswordVerify" /><div data-bind="errorBinding: PasswordVerify"></div>
+<br />
 <div data-bind="labelBinding: SomeInt">SomeInt</div>
 <input id="SomeInt" type="text" data-bind="dataValue: _formatted.SomeInt" /><div data-bind="errorBinding: SomeInt"></div>
 <br />
@@ -74,8 +80,19 @@
 
             $.getJSON("/api/Person/121").success(function(data){
                 var personVm = new app.person.Person(metadata);
+                //Add a validationRule to the metadate to verify that PasswordVerify equals Password.
+                var propMetadata = personVm.getMetadata('PasswordVerify');
+                propMetadata.validationRules.push({
+                    name: 'equal',
+                    params: {
+                        other: 'Password'
+                    }
+                });
+
                 ko.metadata.mapToViewModelByMetadata(data, personVm);
+                
                 personVm.addComputed();
+
                 personVm.isValid();
                 ko.applyBindings(personVm);
             }).error(function(data){

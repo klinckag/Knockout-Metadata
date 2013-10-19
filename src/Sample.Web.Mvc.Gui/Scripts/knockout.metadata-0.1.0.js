@@ -227,6 +227,16 @@
                     extenderParams = { params: { min: rule.params.min, max: rule.params.max } };
                     extender = { range: extenderParams };
                 }
+                if (rule.name === 'equal') {
+                    extenderParams = { params: { other: viewmodel[rule.params.other] } };
+                    extender = { equal: extenderParams };
+                    var r = exports.validationRules['equal'];
+                    //TODO : Does this belong here ??
+                    //Example: When PasswordVerify must be equal to Password, 
+                    //  we want a change in Password to trigger the observable PasswordVerify.
+                    //  Doing so ensures the validation is triggered by both fields.
+                    r.ruleAdding(observable, viewmodel, extenderParams.params);
+                }
                 if (rule.name === "required") {
                     viewmodel._validationContainer.requiredFields.push(fieldName);
                 }
@@ -293,7 +303,7 @@
                 },
                 write: function (newValue) {
                     var currentValue = observable();
-                    var parseResult = parseAndFormatDateTime(currentValue, newValue, format);
+                    var parseResult = parseAndFormatDateTime(currentValue, newValue, format, acceptedFormats);
 
                     if (parseResult.parsedValue !== currentValue) {
                         observable(parseResult.parsedValue);
@@ -361,11 +371,6 @@
                 //compensate timezoneoffset ??
                 //parsedValue.setUTCMinutes(parsedValue.getMinutes() - parsedValue.getTimezoneOffset());
                 valueToWrite = parsedValue;
-            }
-
-            //check for overflow.
-            if (!sanityCheckNumber(newValue, parsedValue, format)) {
-                parsedValue = null;
             }
 
             return {
@@ -493,7 +498,9 @@
                     }
                     //And set the value ( with a special case for Dates )
                     if (propMetadata.dataType === "Date" || propMetadata.dataType === "DateTime") {
-                        dataValue = Globalize.parseDate(dataValue, "yyyy-MM-ddTHH:mm:ss");
+                        //TODO timezone handling !!!
+                        var parsed = Globalize.parseDate(dataValue, "yyyy-MM-ddTHH:mm:sszzz");
+                        dataValue = parsed;
                         //compensate timezoneoffset ???
                         //value.setUTCMinutes(value.getMinutes() - value.getTimezoneOffset());
                     }
@@ -539,13 +546,13 @@
                     var acceptedFormats;
                     switch (dataType) {
                         case "Date":
-                            acceptedFormats = acceptedDateFormats;
+                            acceptedFormats = getAcceptedDateAndTimeFormats().acceptedDateFormats;
                             break;
                         case "DateTime":
-                            acceptedFormats = acceptedDateTimeformats;
+                            acceptedFormats = getAcceptedDateAndTimeFormats().acceptedDateTimeformats;
                             break;
                         case "Time":
-                            acceptedFormats = acceptedTimeformats;
+                            acceptedFormats = getAcceptedDateAndTimeFormats().acceptedTimeformats;
                     };
 
                     formatter = ko.metadata.createDateFormatter(viewmodel[propMetadata.propertyName], acceptedFormats, null);
@@ -758,22 +765,41 @@
             return sHTML;
         };
 
-        //We want to support short date short time (d t) and short date long time (d T) and ... to parse datetime input
-        //TODO provide even more valid formats for parsing
-        var shortDateFormat = globalizeExpandFormat("d");
-        var shortTimeFormat = globalizeExpandFormat("t");
-        var longTimeFormat = globalizeExpandFormat("T");
         //Accepted Date Formats
-        var acceptedDateFormats = [0];
-        acceptedDateFormats[0] = shortDateFormat;
+        var acceptedDateFormats = null;
         //Accepted DateTime Formats
-        var acceptedDateTimeformats = [1];
-        acceptedDateTimeformats[0] = shortDateFormat + " " + shortTimeFormat;
-        acceptedDateTimeformats[1] = shortDateFormat + " " + longTimeFormat;
+        var acceptedDateTimeformats = null;
         //Accepted Time Formats
-        var acceptedTimeformats = [1];
-        acceptedTimeformats[0] = shortTimeFormat;
-        acceptedTimeformats[1] = longTimeFormat;
+        var acceptedTimeformats = null;
+
+        getAcceptedDateAndTimeFormats = function () {
+            if (acceptedDateFormats === null) {
+                //We want to support short date short time (d t) and short date long time (d T) and ... to parse datetime input
+                //TODO provide even more valid formats for parsing
+                var shortDateFormat = globalizeExpandFormat("d");
+                var shortTimeFormat = globalizeExpandFormat("t");
+                var longTimeFormat = globalizeExpandFormat("T");
+
+                acceptedDateFormats = [0];
+                acceptedDateTimeformats = [1];
+                acceptedTimeformats = [1];
+
+                //Accepted Date Formats
+                acceptedDateFormats[0] = shortDateFormat;
+                //Accepted DateTime Formats
+                acceptedDateTimeformats[0] = shortDateFormat + " " + shortTimeFormat;
+                acceptedDateTimeformats[1] = shortDateFormat + " " + longTimeFormat;
+                //Accepted Time Formats
+                acceptedTimeformats[0] = shortTimeFormat;
+                acceptedTimeformats[1] = longTimeFormat;
+            }
+
+            return {
+                acceptedDateFormats: acceptedDateFormats,
+                acceptedDateTimeformats: acceptedDateTimeformats,
+                acceptedTimeformats: acceptedTimeformats
+            }
+        }
 
         return {
             formatMessage: formatMessage,
@@ -937,6 +963,23 @@
             args.push(options.min);
             args.push(options.max);
             return args;
+        }
+    };
+    metadata.validationRules.equal = {
+        validator: function (value, options) {
+            return value == options.other();
+        },
+        message: "{0} must be equal to {1}",
+        messageArguments: function (options) {
+            var args = [];
+            args.push(options.other.displayName);
+            return args;
+        },
+        ruleAdding: function (target, viewmodel, options) {
+            //TODO only when target and options.other is an observable
+            options.other.subscribe(function () {
+                target.valueHasMutated();
+            });
         }
     };
     //now register all of these!

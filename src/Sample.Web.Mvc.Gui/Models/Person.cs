@@ -36,6 +36,10 @@ namespace Sample.Web.Mvc.Gui.Models
 
         //public Int64? SomeInt64 { get; set; }
 
+        public string Password { get; set; }
+
+        public string PasswordVerify { get; set; }
+
         [Required]
         [AdditionalMetadata("scale", 2)]
         public decimal? SomeDecimal { get; set; }
