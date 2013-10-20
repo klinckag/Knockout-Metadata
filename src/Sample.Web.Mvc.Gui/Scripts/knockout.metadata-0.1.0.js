@@ -168,24 +168,67 @@
         };
 
         createObservable = function (viewmodel, fieldName, initialValue) {
+            var extender;
+
             if (initialValue === undefined) {
                 initialValue = null;
             }
-            //Initialize the validation system
-            var metadataValidationOptions = {
-                viewModel: viewmodel,
-                fieldName: fieldName
-            };
-            var observable = ko.observable(initialValue).extend({ metadataValidation: metadataValidationOptions });
+            //Initialize the knockout metadata validation system on the observable
+            var observable = ko.observable(initialValue).extend({
+                metadataValidation: {
+                    viewModel: viewmodel,
+                    fieldName: fieldName
+                }
+            });
 
-            //Required fields are added to a collection, so we can easily add or remove required fields.
-            var validateInRequiredFieldsOptions = {
-                fieldName: fieldName,
-                requiredFields: viewmodel._validationContainer.requiredFields
-            };
-            observable.extend({ validateInRequiredFields: validateInRequiredFieldsOptions });
+            //Required fields are a special case ... every observable validates it when its field in in the requiredFields of the validationContainer
+            //  Doing so we can easily add or remove required fields without having to add/remove rules on the observables themselves
+            observable.extend({
+                validateInRequiredFields: {
+                    fieldName: fieldName,
+                    requiredFields: viewmodel._validationContainer.requiredFields
+                }
+            });
 
             var metadata = viewmodel.getMetadata(fieldName);
+
+            //Validation based on the datatype from the metadata
+            extender = createDataTypeBasedExtender(metadata);
+            if (extender) {
+                observable.extend(extender);
+            }
+
+            //Validation based on the validationRules from the metadata
+            for (i = 0; i < metadata.validationRules.length; i++) {
+                var metaDataValidationRule = metadata.validationRules[i];
+                var validationRule = exports.validationRules[metaDataValidationRule.name];
+
+                //required is a special case ... see above ...
+                if (metaDataValidationRule.name === "required") {
+                    viewmodel._validationContainer.requiredFields.push(fieldName);
+                }
+
+                var extender = createValidationRuleExtender(viewmodel, metaDataValidationRule, validationRule);
+
+                if (extender) {
+                    if (configuration.useMetadataErrorMessage && rule.errorMessage && rule.errorMessage !== '') {
+                        extender.extenderParams.message = rule.errorMessage;
+                    }
+                    if (validationRule && validationRule.ruleAdding) {
+                        //TODO : Does this belong here ?? ( its the only place where we still have access to the viewmodel we are processing)
+                        validationRule.ruleAdding(observable, viewmodel, extender.extenderParams);
+                    };
+
+                    observable.extend(extender.extender);
+                }
+            }
+
+            return observable;
+        };
+
+        createDataTypeBasedExtender = function (metadata) {
+            var extender;
+
             if (metadata && metadata.dataType) {
                 switch (metadata.dataType) {
                     case "Byte":
@@ -196,60 +239,49 @@
                     case "UInt32":
                     case "Int64":
                     case "UInt64":
-                        observable.extend({ validateNumberIsWhole: true });
+                        extender = { validateNumberIsWhole: true };
                         break;
                     case "Single":
                     case "Double":
                     case "Decimal":
-                        observable.extend({ validateNumber: true });
+                        extender = { validateNumber: true };
                         break;
                     case "Date":
-                        observable.extend({ validateDate: true });
+                        extender = { validateDate: true };
                         break;
                     case "EmailAddress":
-                        observable.extend({ validateEmail: "Invalid email" });
+                        extender = { validateEmail: "Invalid email" };
                         break;
                 }
             }
-            for (i = 0; i < metadata.validationRules.length; i++) {
-                var rule = metadata.validationRules[i];
-                var extender = null;
-                var extenderParams = null;
-                if (rule.name === "length" && rule.params.max) {
-                    extenderParams = { params: rule.params.max };
-                    extender = { validateMaxLength: extenderParams };
-                }
-                if (rule.name === "length" && rule.params.min) {
-                    extenderParams = { params: rule.params.min };
-                    extender = { validateMinLength: extenderParams };
-                }
-                if (rule.name === "range") {
-                    extenderParams = { params: { min: rule.params.min, max: rule.params.max } };
-                    extender = { range: extenderParams };
-                }
-                if (rule.name === 'equal') {
-                    extenderParams = { params: { other: viewmodel[rule.params.other] } };
-                    extender = { equal: extenderParams };
-                    var r = exports.validationRules['equal'];
-                    //TODO : Does this belong here ??
-                    //Example: When PasswordVerify must be equal to Password, 
-                    //  we want a change in Password to trigger the observable PasswordVerify.
-                    //  Doing so ensures the validation is triggered by both fields.
-                    r.ruleAdding(observable, viewmodel, extenderParams.params);
-                }
-                if (rule.name === "required") {
-                    viewmodel._validationContainer.requiredFields.push(fieldName);
-                }
-                if (extender !== null) {
-                    if (configuration.useMetadataErrorMessage && rule.errorMessage && rule.errorMessage !== '') {
-                        extenderParams.message = rule.errorMessage;
-                    }
-                    observable.extend(extender);
-                }
+            return extender;
+        };
+
+        createValidationRuleExtender = function (viewmodel, metaDataValidationRule, validationRule) {
+            var extenderParams, extender;
+
+            if (metaDataValidationRule.name === 'length' && metaDataValidationRule.params.max) {
+                extenderParams = { max: metaDataValidationRule.params.max };
+                extender = { validateMaxLength: extenderParams };
+            }
+            if (metaDataValidationRule.name === 'length' && metaDataValidationRule.params.min) {
+                extenderParams = { min: metaDataValidationRule.params.min };
+                extender = { validateMinLength: extenderParams };
+            }
+            if (metaDataValidationRule.name === 'range') {
+                extenderParams = { min: metaDataValidationRule.params.min, max: metaDataValidationRule.params.max };
+                extender = { range: extenderParams };
+            }
+            if (metaDataValidationRule.name === 'equal') {
+                extenderParams = { other: viewmodel[metaDataValidationRule.params.other]  };
+                extender = { equal: extenderParams };
             }
 
-            return observable;
-        };
+            return {
+                extender: extender,
+                extenderParams: extenderParams
+            };
+        }
 
         createIntegerFormatter = function (observable) {
             return createNumericFormatter(observable, "n0", false);
@@ -845,34 +877,34 @@
         message: '{0} is required.'
     };
     metadata.validationRules.validateMaxLength = {
-        validator: function (val, maxLength) {
+        validator: function (val, options) {
             if (val === undefined || val === null || val.length === undefined) {
                 return true;
             }
             else {
-                return val.length <= maxLength;
+                return val.length <= options.max;
             }
         },
         message: 'Please enter no more than {1} characters for {0}.',
         messageArguments: function (options) {
             var args = [];
-            args.push(options);
+            args.push(options.max);
             return args;
         }
     };
     metadata.validationRules.validateMinLength = {
-        validator: function (val, minLength) {
+        validator: function (val, options) {
             if (val === undefined || val === null || val.length === undefined) {
                 return true;
             }
             else {
-                return val.length >= minLength;
+                return val.length >= options.min;
             }
         },
         message: 'Please enter at least {1} characters for {0}.',
         messageArguments: function (options) {
             var args = [];
-            args.push(options);
+            args.push(options.min);
             return args;
         }
     };
@@ -977,6 +1009,9 @@
         },
         ruleAdding: function (target, viewmodel, options) {
             //TODO only when target and options.other is an observable
+            //Example: When PasswordVerify must be equal to Password, 
+            //  we want a change in Password to trigger the observable PasswordVerify.
+            //  Doing so ensures the validation is triggered by both fields.
             options.other.subscribe(function () {
                 target.valueHasMutated();
             });
