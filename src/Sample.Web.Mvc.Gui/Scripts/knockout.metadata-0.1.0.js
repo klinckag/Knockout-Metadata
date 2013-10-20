@@ -168,7 +168,7 @@
         };
 
         createObservable = function (viewmodel, fieldName, initialValue) {
-            var extender;
+            var extenderInfo;
 
             if (initialValue === undefined) {
                 initialValue = null;
@@ -193,9 +193,9 @@
             var metadata = viewmodel.getMetadata(fieldName);
 
             //Validation based on the datatype from the metadata
-            extender = createDataTypeBasedExtender(metadata);
-            if (extender) {
-                observable.extend(extender);
+            extenderInfo = createDataTypeBasedExtender(metadata);
+            if (extenderInfo) {
+                observable.extend(extenderInfo.extender);
             }
 
             //Validation based on the validationRules from the metadata
@@ -208,18 +208,18 @@
                     viewmodel._validationContainer.requiredFields.push(fieldName);
                 }
 
-                var extender = createValidationRuleExtender(viewmodel, metaDataValidationRule, validationRule);
+                extenderInfo = createValidationRuleExtender(viewmodel, metaDataValidationRule, validationRule);
 
-                if (extender) {
+                if (extenderInfo) {
                     if (configuration.useMetadataErrorMessage && rule.errorMessage && rule.errorMessage !== '') {
-                        extender.extenderParams.message = rule.errorMessage;
+                        extenderInfo.extenderParams.message = rule.errorMessage;
                     }
                     if (validationRule && validationRule.ruleAdding) {
                         //TODO : Does this belong here ?? ( its the only place where we still have access to the viewmodel we are processing)
-                        validationRule.ruleAdding(observable, viewmodel, extender.extenderParams);
+                        validationRule.ruleAdding(observable, viewmodel, extenderInfo.extenderParams);
                     };
 
-                    observable.extend(extender.extender);
+                    observable.extend(extenderInfo.extender);
                 }
             }
 
@@ -239,22 +239,29 @@
                     case "UInt32":
                     case "Int64":
                     case "UInt64":
-                        extender = { validateNumberIsWhole: true };
+                        extenderParams = {};
+                        extender = { validateNumberIsWhole: extenderParams };
                         break;
                     case "Single":
                     case "Double":
                     case "Decimal":
-                        extender = { validateNumber: true };
+                        extenderParams = {};
+                        extender = { validateNumber: extenderParams };
                         break;
                     case "Date":
                         extender = { validateDate: true };
                         break;
                     case "EmailAddress":
-                        extender = { validateEmail: "Invalid email" };
+                        extenderParams = {};
+                        extender = { validateEmail: extenderParams };
                         break;
                 }
             }
-            return extender;
+
+            return {
+                extender: extender,
+                extenderParams: extenderParams
+            };
         };
 
         createValidationRuleExtender = function (viewmodel, metaDataValidationRule, validationRule) {
@@ -910,7 +917,7 @@
     };
     //EMail validation
     metadata.validationRules.validateEmail = {
-        validator: function (value, validationMessage) {
+        validator: function (value, options) {
             var result = true;
             if (value !== undefined && value !== "") {
                 result = /^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))$/i.test(value);
@@ -926,7 +933,7 @@
     //      This is OK. Behind the scenes we are working with ko.observables, so if we want to do calculations on those (fi ko.computed), 
     //      we want them to be of type number.
     metadata.validationRules.validateNumberIsWhole = {
-        validator: function (value, mustBeInt32) {
+        validator: function (value, options) {
             var result = true;
             if (typeof value !== 'number') {
                 result = false;
@@ -944,7 +951,7 @@
     //  We do not try to parse non-number formats, we assume the binding (createIntegerFormatter) has done the parsing to the number type.
     //      See remark for validateNumberIsWhole
     metadata.validationRules.validateNumber = {
-        validator: function (value, validationMessage) {
+        validator: function (value, options) {
             var result = true;
             if (value !== undefined && value !== null) {
                 if (typeof value !== 'number') {
@@ -957,7 +964,7 @@
     };
     //Date validation
     metadata.validationRules.validateDate = {
-        validator: function (value, mustBeDate) {
+        validator: function (value, options) {
             //TODO review this
             var dateValue = value;
             if (value !== undefined && value !== "" && !(value instanceof Date)) {
@@ -971,9 +978,9 @@
     //Required validation
     metadata.validationRules.validateInRequiredFields = {
         // The actual validation logic
-        validator: function (value, params) {
+        validator: function (value, options) {
             var result = true;
-            if (params.requiredFields.indexOf(params.fieldName) >= 0 && (value === undefined || value === null || value === "")) {
+            if (options.requiredFields.indexOf(options.fieldName) >= 0 && (value === undefined || value === null || value === "")) {
                 result = false;
             }
             return result;
