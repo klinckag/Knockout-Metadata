@@ -37,7 +37,7 @@ It is not necessary to specify the observables. They will be added automatically
   Person = function (metadata) {
       var self = this;
       //some plumbing to enable the metadata plugin magic
-      ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
+      ko.metadata.ViewModelBase.call(self, metadata);
 
       //These are added automatically ( by the mapToViewModelByMetadata )
       //self.FirstName = ko.observable();
