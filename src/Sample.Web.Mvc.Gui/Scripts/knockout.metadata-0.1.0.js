@@ -987,6 +987,7 @@
         },
         message: "{0} is required."
     };
+    //Range validation
     metadata.validationRules.range = {
         validator: function (value, options) {
             var result = true;
@@ -1004,6 +1005,7 @@
             return args;
         }
     };
+    //Equal validation
     metadata.validationRules.equal = {
         validator: function (value, options) {
             return value == options.other();

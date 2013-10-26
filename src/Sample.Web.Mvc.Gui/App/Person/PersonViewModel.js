@@ -2,7 +2,8 @@
 app.person = function () {
     Address = function (metadata) {
         var self = this;
-        ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
+        //ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
+        ko.metadata.ViewModelBase.call(self, metadata);
 
         //These are created automagically ( by the mapToViewModelByMetadata)
         //self.Street = self.createObservable("Street");
@@ -10,7 +11,8 @@ app.person = function () {
 
     Skill = function (metadata) {
         var self = this;
-        ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
+        //ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
+        ko.metadata.ViewModelBase.call(self, metadata);
 
         //These are created automagically ( by the mapToViewModelByMetadata)
         //self.Name = self.createObservable("Name");
@@ -19,7 +21,8 @@ app.person = function () {
 
     Person = function (metadata) {
         var self = this;
-        ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
+        //ko.utils.extend(self, new ko.metadata.ViewModelBase(metadata));
+        ko.metadata.ViewModelBase.call(self, metadata);
 
         //TODO find a better way to handle this
         //helpers to create instances of child viewmodels go on the _childs function
