@@ -292,8 +292,8 @@
             return createNumericFormatter(observable, "n0", false);
         };
 
-        createDecimalFormatter = function (observable, numberOfDecimalPlaces) {
-            return createNumericFormatter(observable, "n" + numberOfDecimalPlaces, true);
+        createDecimalFormatter = function (observable, scale) {
+            return createNumericFormatter(observable, "n" + scale, true);
         };
 
         createNumericFormatter = function (observable, format, allowDecimals) {
@@ -318,6 +318,7 @@
                 }
             });
 
+            //provide access to the underlying unformatted observable
             result.unFormattedObservable = ko.computed(function () {
                 return observable;
             });
@@ -351,6 +352,7 @@
                 }
             });
 
+            //provide access to the underlying unformatted observable
             result.unFormattedObservable = ko.computed(function () {
                 return observable;
             });
@@ -494,7 +496,6 @@
         };
 
         //using the metadata to build up the viewmodel from scratch
-
         mapToViewModelByMetadataInternal = function (data, viewmodel, metadata) {
             //Loop metadata for all the Properties of the entity
             for (var i = 0; i < metadata.properties.length; i++) {
