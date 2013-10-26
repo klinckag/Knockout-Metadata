@@ -76,7 +76,7 @@ $(document).ready(function(){
 });
 ```
 * [metadata](https://github.com/klinckag/Knockout-Metadata/wiki/Example-metadata) holds all info to set up validation
-* Globalize is used to privide locale aware validation, parsing and formatting.
+* Globalize is used to provide locale aware validation, parsing and formatting.
 * mapToViewModelByMetadata uses the metadata to map the actual data to the view model ( and automatically creates the necessary observables )
 
 ###Result
