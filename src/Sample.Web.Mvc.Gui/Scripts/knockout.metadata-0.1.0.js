@@ -46,8 +46,7 @@
     var configuration = ko.utils.extend({}, defaults);
     ko.metadata.configuration = configuration;
 
-    //#region ViewModelBase:..
-    //BaseViewModel which ViewModels should extend.
+    //ViewModelBase which ViewModels should extend.
     //   It provides basic functionality for validation and metadata
     var vmb = (function () {
         var ViewModelBase = function (metadata) {
@@ -109,9 +108,8 @@
         };
     }());
 
-    // Expose
+    // Expose ViewModelBase
     ko.utils.extend(metadata, vmb);
-    //#endregion ViewModelBase:..
 
     var utils = (function () {
         return {
@@ -181,8 +179,8 @@
                 }
             });
 
-            //Required fields are a special case ... every observable validates it when its field in in the requiredFields of the validationContainer
-            //  Doing so we can easily add or remove required fields without having to add/remove rules on the observables themselves
+            //Required fields are a special case ... every observable validates whether its field is in the requiredFields of the validationContainer
+            //  This allows to easily add or remove required fields without having to add/remove rules on the observables themselves
             observable.extend({
                 validateInRequiredFields: {
                     fieldName: fieldName,
@@ -267,11 +265,11 @@
         createValidationRuleExtender = function (viewmodel, metaDataValidationRule, validationRule) {
             var extenderParams, extender;
 
-            if (metaDataValidationRule.name === 'length' && metaDataValidationRule.params.max) {
+            if (metaDataValidationRule.name === 'length' && metaDataValidationRule.params.max !== undefined) {
                 extenderParams = { max: metaDataValidationRule.params.max };
                 extender = { validateMaxLength: extenderParams };
             }
-            if (metaDataValidationRule.name === 'length' && metaDataValidationRule.params.min) {
+            if (metaDataValidationRule.name === 'length' && metaDataValidationRule.params.min !== undefined) {
                 extenderParams = { min: metaDataValidationRule.params.min };
                 extender = { validateMinLength: extenderParams };
             }
