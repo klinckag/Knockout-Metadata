@@ -11,48 +11,51 @@
     <span style="cursor: pointer" data-bind="visible: !data.isValid(), attr: { title: data.validationMessage }">&nbsp;!&nbsp;</span>
 </script>
 <br />
+<fieldset data-bind="with: Address">
+    <legend>Address</legend>
+    <div data-bind="labelBinding: Street"></div>
+    <input id="Address.Street" type="text" data-bind="dataValue: Street" /><div data-bind="    errorBinding: Street"></div>
+    <br />
+    <div data-bind="labelBinding: Number"></div>
+    <input id="Address.Number" type="text" data-bind="dataValue: Number" /><div data-bind="    errorBinding: Number"></div>
+</fieldset>
 <div data-bind="labelBinding: FirstName">FirstName</div>
-<input id="FirstName" type="text" data-bind="dataValue: FirstName" /><div data-bind="errorBinding: FirstName"></div>
+<input id="FirstName" type="text" data-bind="dataValue: FirstName" /><div data-bind="    errorBinding: FirstName"></div>
 <br />
 <div>FullName</div>
 <div data-bind="text: FullName"></div>
 <br />
 <div data-bind="labelBinding: LastName">LastName</div>
-<input id="LastName" type="text" data-bind="dataValue: LastName" /><div data-bind="errorBinding: LastName"></div>
+<input id="LastName" type="text" data-bind="dataValue: LastName" /><div data-bind="    errorBinding: LastName"></div>
 <br />
 <div data-bind="labelBinding: EMail">EMail</div>
-<input id="EMail" type="text" data-bind="dataValue: EMail" /><div data-bind="errorBinding: EMail"></div>
+<input id="EMail" type="text" data-bind="dataValue: EMail" /><div data-bind="    errorBinding: EMail"></div>
 <br />
 <div data-bind="labelBinding: Password">SomeInt</div>
-<input id="Password" type="text" data-bind="dataValue: Password" /><div data-bind="errorBinding: Password"></div>
+<input id="Password" type="text" data-bind="dataValue: Password" /><div data-bind="    errorBinding: Password"></div>
 <br />
 <div data-bind="labelBinding: PasswordVerify">SomeInt</div>
-<input id="PasswordVerify" type="text" data-bind="dataValue: PasswordVerify" /><div data-bind="errorBinding: PasswordVerify"></div>
+<input id="PasswordVerify" type="text" data-bind="dataValue: PasswordVerify" /><div data-bind="    errorBinding: PasswordVerify"></div>
 <br />
 <div data-bind="labelBinding: SomeInt">SomeInt</div>
-<input id="SomeInt" type="text" data-bind="dataValue: _formatted.SomeInt" /><div data-bind="errorBinding: SomeInt"></div>
+<input id="SomeInt" type="text" data-bind="dataValue: _formatted.SomeInt" /><div data-bind="    errorBinding: SomeInt"></div>
 <br />
 <div data-bind="labelBinding: SomeRange">SomeInt</div>
-<input id="SomeRange" type="text" data-bind="dataValue: _formatted.SomeRange" /><div data-bind="errorBinding: SomeRange"></div>
+<input id="SomeRange" type="text" data-bind="dataValue: _formatted.SomeRange" /><div data-bind="    errorBinding: SomeRange"></div>
 <br />
 <div data-bind="labelBinding: SomeDecimal">SomeDecimal</div>
-<input id="SomeDecimal" type="text" data-bind="dataValue: _formatted.SomeDecimal" /><div data-bind="errorBinding: SomeDecimal"></div>
+<input id="SomeDecimal" type="text" data-bind="dataValue: _formatted.SomeDecimal" /><div data-bind="    errorBinding: SomeDecimal"></div>
 <br />
 <div data-bind="labelBinding: BirthDate">BirthDate</div>
-<input id="BirthDate" type="text" data-bind="dataValue: _formatted.BirthDate" /><div data-bind="errorBinding: BirthDate"></div>
+<input id="BirthDate" type="text" data-bind="dataValue: _formatted.BirthDate" /><div data-bind="    errorBinding: BirthDate"></div>
 <br />
-<div data-bind="labelBinding: Address().Street"></div>
-<input id="Address.Street" type="text" data-bind="dataValue: Address().Street" /><div data-bind="errorBinding: Address().Street"></div>
-<br />
-<div data-bind="labelBinding: Address().Number"></div>
-<input id="Address.Number" type="text" data-bind="dataValue: Address().Number" /><div data-bind="errorBinding: Address().Number"></div>
-<br />
+
 
 <div>Skills</div>
 <!-- ko foreach: $data.Skills -->
 <div>
     <div data-bind="labelBinding: $data.Name"></div>
-    <input type="text" data-bind="dataValue: $data.Name" /><div data-bind="errorBinding: $data.Name"></div>
+    <input type="text" data-bind="dataValue: $data.Name" /><div data-bind="    errorBinding: $data.Name"></div>
 </div>
 <!-- /ko -->
 
@@ -70,6 +73,7 @@
     <script type="text/javascript">
         $(document).ready(function(){
             var metadata = @Html.Raw(((object)Model).ToJson());
+            var copyOfMetadata = ko.utils.extend({}, metadata);
 
             Globalize.culture("nl-BE");
 

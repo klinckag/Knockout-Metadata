@@ -134,10 +134,9 @@
                 return element.getAttribute(attr);
             },
             getOriginalElementTitle: function (element) {
-                var savedOriginalTitle = utils.getAttribute(element, 'data-orig-title'),
-                    currentTitle = element.title,
-                    hasSavedOriginalTitle = utils.hasAttribute(element, 'data-orig-title');
-
+                var savedOriginalTitle = utils.getAttribute(element, 'data-orig-title');
+                var currentTitle = element.title;
+                var hasSavedOriginalTitle = utils.hasAttribute(element, 'data-orig-title');
 
                 return hasSavedOriginalTitle ?
                     savedOriginalTitle : currentTitle;
@@ -278,7 +277,7 @@
                 extender = { range: extenderParams };
             }
             if (metaDataValidationRule.name === 'equal') {
-                extenderParams = { other: viewmodel[metaDataValidationRule.params.other]  };
+                extenderParams = { other: viewmodel[metaDataValidationRule.params.other] };
                 extender = { equal: extenderParams };
             }
 
@@ -449,7 +448,7 @@
             var parsedNewValue = parseFloat(newValueStripped);
             //replace the language decimal separator with the decimal separator 
             parsedNewValue = (parsedNewValue + '').replace('.', decSep);
-            
+
             return (newValueStripped == parsedNewValue);
         }
 
@@ -523,7 +522,8 @@
                         //ComplexType ( but not a list)
                         //Convention => 'create<DataType>' function is used to create an item
                         vm = viewmodel._childs["create" + propMetadata.dataType](propMetadata);
-                        var observableChild = ko.observable(vm);
+                        //Must pass in the 'initialvalue' here !
+                        var observableChild = createObservable(viewmodel, propMetadata.propertyName, vm);
                         mapToViewModelByMetadataInternal(dataValue, vm, propMetadata);
                         viewmodel[propMetadata.propertyName] = observableChild;
                     }
@@ -938,7 +938,7 @@
                 result = false;
             }
             else {
-                if (Math[value < 0 ? 'ceil' : 'floor'](value) !== value ) {
+                if (Math[value < 0 ? 'ceil' : 'floor'](value) !== value) {
                     result = false;
                 }
             }
@@ -1125,13 +1125,21 @@
             //add or remove class on the element;
             ko.bindingHandlers.css.update(element, cssSettingsAccessor);
 
-            if (!config.errorsAsTitle) { return; }
+            if (!config.errorsAsTitle) {
+                return;
+            }
 
             var errorMsgTitleAccessor = function () {
                 if (!isValid) {
-                    return { title: observable.validationMessage, 'data-orig-title': utils.getOriginalElementTitle(element) };
+                    return {
+                        title: observable.validationMessage,
+                        'data-orig-title': utils.getOriginalElementTitle(element)
+                    };
                 } else {
-                    return { title: utils.getOriginalElementTitle(element), 'data-orig-title': null };
+                    return {
+                        title: utils.getOriginalElementTitle(element),
+                        'data-orig-title': null
+                    };
                 }
             };
             ko.bindingHandlers.attr.update(element, errorMsgTitleAccessor);
@@ -1142,7 +1150,7 @@
     ko.bindingHandlers.errorBinding = {
         init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
             var accessor = valueAccessor();
-            ko.renderTemplate('kov_fieldValidationIndicator', { data: valueAccessor() }, {}, element, 'replaceNode');
+            ko.renderTemplate('kometadata_fieldValidationIndicator', { data: valueAccessor() }, {}, element, 'replaceNode');
         },
         update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
             // This will be called once when the binding is first applied to an element,
@@ -1154,7 +1162,7 @@
     ko.bindingHandlers.labelBinding = {
         init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
             var accessor = valueAccessor();
-            ko.renderTemplate('kov_label', { data: valueAccessor() }, {}, element, 'replaceNode');
+            ko.renderTemplate('kometadata_label', { data: valueAccessor() }, {}, element, 'replaceNode');
         },
         update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
             // This will be called once when the binding is first applied to an element,
@@ -1170,6 +1178,6 @@
         document.write("<script type='text/html' id='" + templateName + "'>" + templateMarkup + "<" + "/script>");
     };
 
-    templateEngine.addTemplate("kov_fieldValidationIndicator", "<span class=\"kov_fieldValidationIndicator\" data-bind=\"visible: !data.isValidForUi(), attr: {title: data.validationMessage}\">&nbsp;!&nbsp;</span>");
-    templateEngine.addTemplate("kov_label", "<label data-bind=\"attr: { for: data.fieldName }, text: data.displayName + ' : '\"></label>");
+    templateEngine.addTemplate("kometadata_fieldValidationIndicator", "<span class=\"kov_fieldValidationIndicator\" data-bind=\"visible: !data.isValidForUi(), attr: {title: data.validationMessage}\">&nbsp;!&nbsp;</span>");
+    templateEngine.addTemplate("kometadata_label", "<label data-bind=\"attr: { for: data.fieldName }, text: data.displayName + ' : '\"></label>");
 }));

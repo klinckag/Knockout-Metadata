@@ -396,11 +396,9 @@ aside {
 
 /* forms */
 fieldset {
-    border: none;
-    margin: 0;
-    padding: 0;
+    border: 1px solid black;
 }
-
+    /*
     fieldset legend {
         display: none;
     }
@@ -413,7 +411,7 @@ fieldset {
         fieldset ol li {
             padding-bottom: 5px;
         }
-
+*/
 label {
     display: inline;
     font-size: 1.2em;
